@@ -1,0 +1,133 @@
+.page {
+  min-height: 100svh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.skipLink {
+  position: fixed;
+  z-index: 20;
+  top: 0.75rem;
+  left: 0.75rem;
+  padding: 0.7rem 1rem;
+  color: var(--color-canvas);
+  background: var(--color-ink);
+  transform: translateY(-160%);
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+
+.skipLink:focus {
+  transform: translateY(0);
+}
+
+.header,
+.footer {
+  width: min(100% - 2rem, var(--width-shell));
+  margin-inline: auto;
+}
+
+.header {
+  min-height: 5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.identity {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+}
+
+.wordmark {
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.descriptor {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+.headerLink,
+.footer a {
+  color: var(--color-ink);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+}
+
+.main {
+  width: min(100% - 2rem, var(--width-reading));
+  margin-inline: auto;
+  padding-block: clamp(4.5rem, 11vw, 8.5rem) 5rem;
+}
+
+.introduction {
+  margin-bottom: clamp(3rem, 7vw, 5rem);
+}
+
+.eyebrow {
+  margin: 0 0 1.35rem;
+  color: var(--color-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.introduction h1 {
+  max-width: 12ch;
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(3.25rem, 9vw, 6.5rem);
+  font-weight: 420;
+  letter-spacing: -0.055em;
+  line-height: 0.93;
+}
+
+.lede {
+  max-width: 39rem;
+  margin: 1.75rem 0 0;
+  color: var(--color-muted);
+  font-size: clamp(1.05rem, 2vw, 1.2rem);
+  line-height: 1.6;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  padding-block: 1.5rem 2rem;
+  color: var(--color-muted);
+  border-top: 1px solid var(--color-rule);
+  font-size: 0.78rem;
+}
+
+.footer p {
+  margin: 0;
+}
+
+.footer nav {
+  display: flex;
+  gap: 1rem;
+}
+
+@media (max-width: 40rem) {
+  .header {
+    min-height: 4.25rem;
+  }
+
+  .descriptor {
+    display: none;
+  }
+
+  .main {
+    padding-block: 3.75rem 4rem;
+  }
+
+  .footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -1,0 +1,9 @@
+ask.lkmori.com {
+	handle_path /api/* {
+		reverse_proxy ask-lucas-api:8000
+	}
+
+	handle {
+		reverse_proxy ask-lucas-web:3000
+	}
+}

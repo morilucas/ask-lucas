@@ -1,0 +1,54 @@
+name: ask-lucas
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    environment:
+      ASK_LUCAS_BUILD_VERSION: ${ASK_LUCAS_BUILD_VERSION:-local}
+      ASK_LUCAS_ALLOWED_ORIGINS: ${ASK_LUCAS_ALLOWED_ORIGINS:-https://ask.lkmori.com}
+      ASK_LUCAS_CONTENT_DIR: /private/content
+      ASK_LUCAS_ANSWER_FIXTURE_PATH: /private/fixtures/answers.json
+      ASK_LUCAS_EVALUATION_PATH: /private/evals/employer-questions.yaml
+      ASK_LUCAS_INDEX_PATH: /data/content.db
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    volumes:
+      - ${ASK_LUCAS_PRIVATE_ROOT:-/opt/ask-lucas/private}:/private:ro
+      - index-data:/data
+    networks:
+      proxy:
+        aliases:
+          - ask-lucas-api
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: /api
+    depends_on:
+      - api
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    networks:
+      proxy:
+        aliases:
+          - ask-lucas-web
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  index-data:
+
+networks:
+  proxy:
+    external: true
+    name: stack_stack

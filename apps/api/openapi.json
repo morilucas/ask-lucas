@@ -1,0 +1,594 @@
+{
+  "components": {
+    "schemas": {
+      "AbstainedAnswer": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "abstained",
+            "default": "abstained",
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "suggestions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          },
+          "trace": {
+            "$ref": "#/components/schemas/TraceSummary"
+          }
+        },
+        "required": [
+          "message",
+          "suggestions",
+          "trace"
+        ],
+        "title": "AbstainedAnswer",
+        "type": "object"
+      },
+      "AnswerBlock": {
+        "additionalProperties": false,
+        "properties": {
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "text": {
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "source_ids"
+        ],
+        "title": "AnswerBlock",
+        "type": "object"
+      },
+      "AnswerRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "question": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "AnswerRequest",
+        "type": "object"
+      },
+      "ErrorEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "trace_id": {
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "trace_id",
+          "retryable"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "EvaluationSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "behavior_passed": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Behavior Passed"
+          },
+          "behavior_total": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Behavior Total"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "retrieval_recall_at_3": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieval Recall At 3"
+          },
+          "status": {
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "version"
+        ],
+        "title": "EvaluationSummary",
+        "type": "object"
+      },
+      "GroundedAnswer": {
+        "additionalProperties": false,
+        "properties": {
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/AnswerBlock"
+            },
+            "minItems": 1,
+            "title": "Blocks",
+            "type": "array"
+          },
+          "kind": {
+            "const": "grounded",
+            "default": "grounded",
+            "title": "Kind",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "minItems": 1,
+            "title": "Sources",
+            "type": "array"
+          },
+          "trace": {
+            "$ref": "#/components/schemas/TraceSummary"
+          }
+        },
+        "required": [
+          "blocks",
+          "sources",
+          "trace"
+        ],
+        "title": "GroundedAnswer",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "build_version": {
+            "title": "Build Version",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "build_version"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "RetrievalSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "score_kind": {
+            "title": "Score Kind",
+            "type": "string"
+          },
+          "score_order": {
+            "enum": [
+              "lower_is_better",
+              "higher_is_better",
+              "not_applicable"
+            ],
+            "title": "Score Order",
+            "type": "string"
+          },
+          "strategy": {
+            "title": "Strategy",
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy",
+          "limit",
+          "score_kind",
+          "score_order"
+        ],
+        "title": "RetrievalSummary",
+        "type": "object"
+      },
+      "RetrievedItem": {
+        "additionalProperties": false,
+        "properties": {
+          "rank": {
+            "minimum": 1.0,
+            "title": "Rank",
+            "type": "integer"
+          },
+          "raw_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Score"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "rank"
+        ],
+        "title": "RetrievedItem",
+        "type": "object"
+      },
+      "Source": {
+        "additionalProperties": false,
+        "properties": {
+          "content_path": {
+            "title": "Content Path",
+            "type": "string"
+          },
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "title",
+          "section",
+          "excerpt",
+          "content_path"
+        ],
+        "title": "Source",
+        "type": "object"
+      },
+      "SystemSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "build_version": {
+            "title": "Build Version",
+            "type": "string"
+          },
+          "evaluation": {
+            "$ref": "#/components/schemas/EvaluationSummary"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "next_experiment": {
+            "title": "Next Experiment",
+            "type": "string"
+          },
+          "retrieval": {
+            "$ref": "#/components/schemas/RetrievalSummary"
+          }
+        },
+        "required": [
+          "build_version",
+          "retrieval",
+          "evaluation",
+          "limitations",
+          "next_experiment"
+        ],
+        "title": "SystemSummary",
+        "type": "object"
+      },
+      "TraceSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "estimated_cost_usd": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Cost Usd"
+          },
+          "generation_ms": {
+            "minimum": 0.0,
+            "title": "Generation Ms",
+            "type": "number"
+          },
+          "input_tokens": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Tokens"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "output_tokens": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Tokens"
+          },
+          "provider_mode": {
+            "enum": [
+              "mock",
+              "live"
+            ],
+            "title": "Provider Mode",
+            "type": "string"
+          },
+          "retrieval_ms": {
+            "minimum": 0.0,
+            "title": "Retrieval Ms",
+            "type": "number"
+          },
+          "retrieval_strategy": {
+            "title": "Retrieval Strategy",
+            "type": "string"
+          },
+          "retrieved": {
+            "items": {
+              "$ref": "#/components/schemas/RetrievedItem"
+            },
+            "title": "Retrieved",
+            "type": "array"
+          },
+          "score_kind": {
+            "title": "Score Kind",
+            "type": "string"
+          },
+          "score_order": {
+            "enum": [
+              "lower_is_better",
+              "higher_is_better",
+              "not_applicable"
+            ],
+            "title": "Score Order",
+            "type": "string"
+          },
+          "total_ms": {
+            "minimum": 0.0,
+            "title": "Total Ms",
+            "type": "number"
+          },
+          "trace_id": {
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "retrieval_strategy",
+          "score_kind",
+          "score_order",
+          "retrieved",
+          "provider_mode",
+          "retrieval_ms",
+          "generation_ms",
+          "total_ms"
+        ],
+        "title": "TraceSummary",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Ask Lucas API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/v1/answer": {
+      "post": {
+        "operationId": "answer_v1_answer_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "discriminator": {
+                    "mapping": {
+                      "abstained": "#/components/schemas/AbstainedAnswer",
+                      "grounded": "#/components/schemas/GroundedAnswer"
+                    },
+                    "propertyName": "kind"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/GroundedAnswer"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AbstainedAnswer"
+                    }
+                  ],
+                  "title": "Response Answer V1 Answer Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Answer"
+      }
+    },
+    "/v1/system": {
+      "get": {
+        "operationId": "system_summary_v1_system_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "System Summary"
+      }
+    }
+  }
+}

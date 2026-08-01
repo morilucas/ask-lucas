@@ -1,0 +1,28 @@
+{
+  "version": "synthetic-1",
+  "answers": [
+    {
+      "question": "What AI and data systems has Lucas built?",
+      "blocks": [
+        {
+          "text": "In the synthetic public dataset, the example candidate builds data pipelines, operational dashboards, and analytical investigations for product teams.",
+          "source_ids": [
+            "experience:acme-ai-data-engineer"
+          ]
+        },
+        {
+          "text": "The fictional role also includes retrieval assistants, layered knowledge bases, evaluation harnesses, and request-intake automation.",
+          "source_ids": [
+            "experience:acme-ai-data-engineer"
+          ]
+        }
+      ]
+    }
+  ],
+  "abstention": {
+    "message": "The synthetic public dataset does not contain a reviewed answer for that question.",
+    "suggestions": [
+      "What AI and data systems has Lucas built?"
+    ]
+  }
+}
