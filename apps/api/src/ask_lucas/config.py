@@ -5,7 +5,17 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
+
+def discover_repository_root() -> Path:
+    """Find a source checkout without assuming a fixed installed-package depth."""
+
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "examples").is_dir():
+            return parent
+    return Path.cwd()
+
+
+REPOSITORY_ROOT = discover_repository_root()
 EXAMPLE_ROOT = REPOSITORY_ROOT / "examples"
 
 
