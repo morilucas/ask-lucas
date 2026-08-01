@@ -1,6 +1,7 @@
 FROM node:24-bookworm-slim AS dependencies
 WORKDIR /app
 COPY apps/web/package.json apps/web/package-lock.json ./
+RUN npm install --global npm@11.6.2
 RUN npm ci
 
 FROM node:24-bookworm-slim AS builder
