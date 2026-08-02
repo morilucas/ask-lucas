@@ -266,16 +266,22 @@ export function AnswerWorkspace() {
       </p>
 
       <div className={styles.chatHeader}>
-        <div>
-          <span className={styles.statusDot} aria-hidden="true" />
-          Grounded assistant
+        <div className={styles.chatContext}>
+          <span>Conversation</span>
+          <span>Ask about Lucas&apos;s work and experience</span>
         </div>
         <div className={styles.chatActions}>
-          <button type="button" onClick={(event) => void openSystemLens(event.currentTarget)}>
+          <button
+            type="button"
+            className={styles.toolbarButton}
+            onClick={(event) => void openSystemLens(event.currentTarget)}
+          >
+            <SystemIcon />
             System lens
           </button>
           {exchanges.length > 0 ? (
-            <button type="button" onClick={newConversation}>
+            <button type="button" className={styles.toolbarButton} onClick={newConversation}>
+              <NewChatIcon />
               New conversation
             </button>
           ) : null}
@@ -283,66 +289,94 @@ export function AnswerWorkspace() {
       </div>
 
       {exchanges.length === 0 ? (
-        <div className={styles.suggestions} aria-label="Suggested questions">
-          {SUGGESTED_QUESTIONS.map((suggestion, index) => (
-            <button
-              key={suggestion.id}
-              type="button"
-              onClick={() => void submitQuestion(suggestion.text)}
-            >
-              <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-              <span>{suggestion.text}</span>
-              <span aria-hidden="true">{"\u2197"}</span>
-            </button>
-          ))}
+        <div className={styles.emptyState}>
+          <div className={styles.emptyContent}>
+            <div className={styles.assistantMark} aria-hidden="true">
+              <SparkIcon />
+            </div>
+            <p className={styles.eyebrow}>Ask Lucas</p>
+            <h1>What would you like to know?</h1>
+            <p className={styles.emptyDescription}>
+              Explore Lucas&apos;s experience, selected work, and approach through answers grounded in
+              reviewed sources.
+            </p>
+            <div className={styles.suggestions} aria-label="Suggested questions">
+              {SUGGESTED_QUESTIONS.map((suggestion) => (
+                <button
+                  key={suggestion.id}
+                  type="button"
+                  aria-label={suggestion.text}
+                  onClick={() => void submitQuestion(suggestion.text)}
+                >
+                  <span className={styles.suggestionIcon} aria-hidden="true">
+                    <PromptIcon />
+                  </span>
+                  <span className={styles.suggestionCopy}>
+                    <span>{suggestion.text}</span>
+                    <span>{suggestion.description}</span>
+                  </span>
+                  <span className={styles.suggestionArrow} aria-hidden="true">
+                    <ArrowUpIcon />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
-        <div className={styles.transcript}>
+        <div className={styles.transcript} data-testid="chat-transcript">
           {exchanges.map((exchange) => (
             <div className={styles.exchange} key={exchange.id}>
               <div className={styles.userMessage}>
-                <p className={styles.speaker}>Question</p>
-                <p>{exchange.question}</p>
+                <div className={styles.userBubble}>
+                  <p className={styles.speaker}>You</p>
+                  <p>{exchange.question}</p>
+                </div>
               </div>
               <article
                 className={styles.assistantMessage}
                 aria-busy={exchange.state.status === "pending"}
               >
-                <p className={styles.speaker}>Ask Lucas</p>
-                {exchange.state.status === "pending" ? (
-                  <div className={styles.pending}>
-                    <p>Reviewing approved sources&hellip;</p>
-                    {exchange.state.slow ? (
-                      <p>The answer is taking longer than usual, but it is still working.</p>
-                    ) : null}
-                  </div>
-                ) : null}
-                {exchange.state.status === "complete" ? (
-                  exchange.state.answer.kind === "grounded" ? (
-                    <GroundedContent answer={exchange.state.answer} onOpenSource={openSource} />
-                  ) : (
-                    <AbstainedContent
-                      answer={exchange.state.answer}
-                      onSuggestion={(question) => void submitQuestion(question)}
-                    />
-                  )
-                ) : null}
-                {exchange.state.status === "error" ? (
-                  <div className={styles.error}>
-                    <p>{exchange.state.message}</p>
-                    {exchange.state.traceId ? <p>Trace {exchange.state.traceId}</p> : null}
-                    {exchange.state.retryable ? (
-                      <button
-                        type="button"
-                        onClick={() => void submitQuestion(exchange.question, exchange.id)}
-                      >
-                        {exchange.state.retryAfterSeconds
-                          ? `Try again in about ${exchange.state.retryAfterSeconds}s`
-                          : "Try again"}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
+                <div className={styles.assistantIdentity}>
+                  <span aria-hidden="true">L</span>
+                  <p className={styles.speaker}>Ask Lucas</p>
+                </div>
+                <div className={styles.assistantContent}>
+                  {exchange.state.status === "pending" ? (
+                    <div className={styles.pending}>
+                      <p>Reviewing approved sources&hellip;</p>
+                      {exchange.state.slow ? (
+                        <p>The answer is taking longer than usual, but it is still working.</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {exchange.state.status === "complete" ? (
+                    exchange.state.answer.kind === "grounded" ? (
+                      <GroundedContent answer={exchange.state.answer} onOpenSource={openSource} />
+                    ) : (
+                      <AbstainedContent
+                        answer={exchange.state.answer}
+                        onSuggestion={(question) => void submitQuestion(question)}
+                      />
+                    )
+                  ) : null}
+                  {exchange.state.status === "error" ? (
+                    <div className={styles.error}>
+                      <p>{exchange.state.message}</p>
+                      {exchange.state.traceId ? <p>Trace {exchange.state.traceId}</p> : null}
+                      {exchange.state.retryable ? (
+                        <button
+                          type="button"
+                          onClick={() => void submitQuestion(exchange.question, exchange.id)}
+                        >
+                          {exchange.state.retryAfterSeconds
+                            ? `Try again in about ${exchange.state.retryAfterSeconds}s`
+                            : "Try again"}
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
               </article>
             </div>
           ))}
@@ -351,7 +385,7 @@ export function AnswerWorkspace() {
       )}
 
       <form
-        className={`${styles.composer} ${exchanges.length === 0 ? styles.composerInitial : ""}`}
+        className={styles.composer}
         onSubmit={handleSubmit}
         noValidate
       >
@@ -362,7 +396,7 @@ export function AnswerWorkspace() {
             id="question"
             name="question"
             value={draft}
-            rows={2}
+            rows={1}
             maxLength={2000}
             disabled={isPending}
             aria-describedby="composer-help composer-validation"
@@ -393,16 +427,18 @@ export function AnswerWorkspace() {
               disabled={draftLength > MAX_QUESTION_LENGTH}
               aria-label="Send message"
             >
-              <span aria-hidden="true">{"\u2197"}</span>
+              <ArrowUpIcon />
             </button>
           )}
         </div>
         <div className={styles.composerFooter}>
           <p id="composer-help">
-            Conversation stays in this tab. Answers are limited to reviewed sources.
+            <span className={styles.groundedDot} aria-hidden="true" />
+            Reviewed sources only · Questions aren&apos;t stored
           </p>
           <p className={draftLength > MAX_QUESTION_LENGTH ? styles.characterError : undefined}>
-            {draftLength}/{MAX_QUESTION_LENGTH}
+            <span className={styles.composerHint}>Enter to send · Shift + Enter for a new line</span>
+            {draftLength ? ` · ${draftLength}/${MAX_QUESTION_LENGTH}` : ""}
           </p>
         </div>
         <p id="composer-validation" className={styles.validation}>
@@ -655,5 +691,48 @@ function SystemPanel({
         <p className={styles.nextExperiment}>Next: {summary.next_experiment}</p>
       </section>
     </div>
+  );
+}
+
+function ArrowUpIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M10 15V5m0 0L6.5 8.5M10 5l3.5 3.5" />
+    </svg>
+  );
+}
+
+function NewChatIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M10 4.25H5.75a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10" />
+      <path d="M12.5 3.75h3.75V7.5M16 4l-6.25 6.25" />
+    </svg>
+  );
+}
+
+function SystemIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <circle cx="10" cy="10" r="6.25" />
+      <path d="M10 7.25v3.5M10 13.35v.1" />
+    </svg>
+  );
+}
+
+function SparkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3.5c.5 4.8 3.2 7.5 8 8-4.8.5-7.5 3.2-8 8-.5-4.8-3.2-7.5-8-8 4.8-.5 7.5-3.2 8-8Z" />
+      <path d="M19 3v3M20.5 4.5h-3" />
+    </svg>
+  );
+}
+
+function PromptIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M4 5.75A1.75 1.75 0 0 1 5.75 4h8.5A1.75 1.75 0 0 1 16 5.75v5.5A1.75 1.75 0 0 1 14.25 13H9l-3.75 3v-3.05A1.75 1.75 0 0 1 4 11.25v-5.5Z" />
+    </svg>
   );
 }

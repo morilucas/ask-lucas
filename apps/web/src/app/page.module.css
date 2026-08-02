@@ -1,17 +1,23 @@
 .page {
-  min-height: 100svh;
+  height: 100svh;
+  min-height: 38rem;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: 4.25rem minmax(0, 1fr);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 0%, rgb(238 242 255 / 55%), transparent 28rem),
+    var(--color-canvas);
 }
 
 .skipLink {
   position: fixed;
-  z-index: 20;
+  z-index: 50;
   top: 0.75rem;
   left: 0.75rem;
   padding: 0.7rem 1rem;
-  color: var(--color-canvas);
+  color: #fff;
   background: var(--color-ink);
+  border-radius: 0.65rem;
   transform: translateY(-160%);
   transition: transform var(--motion-fast) var(--ease-out);
 }
@@ -20,114 +26,118 @@
   transform: translateY(0);
 }
 
-.header,
-.footer {
-  width: min(100% - 2rem, var(--width-shell));
-  margin-inline: auto;
-}
-
 .header {
-  min-height: 5rem;
+  position: relative;
+  z-index: 10;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1.5rem;
+  padding-inline: clamp(1rem, 3vw, 2rem);
+  background: rgb(255 255 255 / 78%);
   border-bottom: 1px solid var(--color-rule);
+  backdrop-filter: blur(20px) saturate(160%);
+}
+
+.identity,
+.identityText,
+.headerMeta,
+.headerMeta nav,
+.availability {
+  display: flex;
+  align-items: center;
 }
 
 .identity {
-  display: flex;
-  align-items: baseline;
+  min-width: 0;
   gap: 0.7rem;
 }
 
-.wordmark {
+.mark {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--color-ink);
+  border-radius: 0.62rem;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+  font-size: 0.85rem;
   font-weight: 650;
+  letter-spacing: -0.03em;
+}
+
+.identityText {
+  align-items: flex-start;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.wordmark {
+  font-size: 0.9rem;
+  font-weight: 620;
   letter-spacing: -0.02em;
 }
 
 .descriptor {
+  margin-top: 0.15rem;
   color: var(--color-muted);
-  font-size: 0.78rem;
+  font-size: 0.7rem;
 }
 
-.headerLink,
-.footer a {
-  color: var(--color-ink);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.25em;
+.headerMeta {
+  gap: 1.5rem;
 }
 
-.main {
-  width: min(100% - 2rem, var(--width-reading));
-  margin-inline: auto;
-  padding-block: clamp(3.5rem, 8vw, 6rem) 5rem;
-}
-
-.introduction {
-  margin-bottom: clamp(2.5rem, 6vw, 4rem);
-}
-
-.eyebrow {
-  margin: 0 0 1.35rem;
-  color: var(--color-accent);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.introduction h1 {
-  max-width: 13ch;
-  margin: 0;
-  font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(3rem, 8vw, 5.6rem);
-  font-weight: 420;
-  letter-spacing: -0.055em;
-  line-height: 0.93;
-}
-
-.lede {
-  max-width: 39rem;
-  margin: 1.75rem 0 0;
-  color: var(--color-muted);
-  font-size: clamp(1.05rem, 2vw, 1.2rem);
-  line-height: 1.6;
-}
-
-.footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 2rem;
-  padding-block: 1.5rem 2rem;
-  color: var(--color-muted);
-  border-top: 1px solid var(--color-rule);
-  font-size: 0.78rem;
-}
-
-.footer p {
-  margin: 0;
-}
-
-.footer nav {
-  display: flex;
+.headerMeta nav {
   gap: 1rem;
 }
 
-@media (max-width: 40rem) {
+.availability {
+  gap: 0.45rem;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+}
+
+.availability > span {
+  width: 0.42rem;
+  height: 0.42rem;
+  background: var(--color-success);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--color-success-soft);
+}
+
+.headerLink {
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  text-decoration: none;
+  transition: color var(--motion-fast) ease;
+}
+
+.headerLink:hover {
+  color: var(--color-ink);
+}
+
+.main {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 42rem) {
+  .page {
+    min-height: 34rem;
+    grid-template-rows: 3.8rem minmax(0, 1fr);
+  }
+
   .header {
-    min-height: 4.25rem;
+    padding-inline: 0.85rem;
   }
 
-  .descriptor {
+  .availability,
+  .descriptor,
+  .headerMeta nav a:first-child {
     display: none;
-  }
-
-  .main {
-    padding-block: 3.75rem 4rem;
-  }
-
-  .footer {
-    align-items: flex-start;
-    flex-direction: column;
   }
 }

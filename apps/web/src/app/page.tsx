@@ -11,34 +11,31 @@ export default function Home() {
 
       <header className={styles.header}>
         <div className={styles.identity}>
-          <span className={styles.wordmark}>Ask Lucas</span>
-          <span className={styles.descriptor}>Grounded AI portfolio</span>
+          <span className={styles.mark} aria-hidden="true">L</span>
+          <span className={styles.identityText}>
+            <span className={styles.wordmark}>Ask Lucas</span>
+            <span className={styles.descriptor}>AI portfolio assistant</span>
+          </span>
         </div>
-        <a className={styles.headerLink} href="https://github.com/morilucas">
-          GitHub
-        </a>
+        <div className={styles.headerMeta}>
+          <span className={styles.availability}>
+            <span aria-hidden="true" />
+            Grounded in reviewed sources
+          </span>
+          <nav aria-label="Professional links">
+            <a className={styles.headerLink} href="https://www.linkedin.com/in/morilucas/">
+              LinkedIn
+            </a>
+            <a className={styles.headerLink} href="https://github.com/morilucas">
+              GitHub
+            </a>
+          </nav>
+        </div>
       </header>
 
       <main id="main-content" className={styles.main}>
-        <section className={styles.introduction} aria-labelledby="page-title">
-          <p className={styles.eyebrow}>AI engineering portfolio</p>
-          <h1 id="page-title">A grounded conversation about Lucas&apos;s work.</h1>
-          <p className={styles.lede}>
-            Ask about his experience, projects, and approach. Continue with follow-up questions,
-            and inspect the reviewed evidence behind every answer.
-          </p>
-        </section>
-
         <AnswerWorkspace />
       </main>
-
-      <footer className={styles.footer}>
-        <p>An AI representation based on reviewed public sources. Questions are not stored.</p>
-        <nav aria-label="Professional links">
-          <a href="https://www.linkedin.com/in/morilucas/">LinkedIn</a>
-          <a href="https://github.com/morilucas">GitHub</a>
-        </nav>
-      </footer>
     </div>
   );
 }

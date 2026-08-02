@@ -6,9 +6,16 @@ const SOURCE_SECTION = "Acme — AI & Data Engineer";
 test("suggestion, grounded answer, follow-up, evidence, and new conversation", async ({ page }) => {
   await page.goto("/");
 
+  await expect(
+    page.getByRole("heading", { name: "What would you like to know?", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Message Ask Lucas", { exact: true })).toBeVisible();
+
   const suggestion = page.getByRole("button", { name: SHOWCASE_QUESTION, exact: true });
   await expect(suggestion).toHaveCount(1);
   await suggestion.click();
+  await expect(page.getByTestId("chat-transcript")).toBeVisible();
+  await expect(page.getByText("You", { exact: true })).toBeVisible();
 
   await expect(
     page.getByText(
