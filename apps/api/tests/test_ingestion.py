@@ -86,6 +86,28 @@ def test_missing_content_directory_fails_clearly(tmp_path: Path) -> None:
         load_approved_content(tmp_path / "missing")
 
 
+def test_editorial_control_sections_never_enter_the_corpus(tmp_path: Path) -> None:
+    content_dir = tmp_path / "content"
+    content_dir.mkdir()
+    write_markdown(
+        content_dir / "profile.md",
+        "# Profile\n\n## Public positioning\n\nApproved.\n\n"
+        "## Explicit exclusions\n\nPrivate boundary instructions.\n",
+    )
+    write_markdown(
+        content_dir / "projects.md",
+        "# Projects\n\n## Public project\n\nApproved evidence.\n\n"
+        "## Evidence gaps to resolve\n\nInternal editorial checklist.\n",
+    )
+
+    chunks = load_approved_content(content_dir)
+
+    assert [chunk.source_id for chunk in chunks] == [
+        "profile:public-positioning",
+        "projects:public-project",
+    ]
+
+
 def test_redaction_removes_configured_and_resolved_content_locations(tmp_path: Path) -> None:
     content_dir = tmp_path / "content"
     content_dir.mkdir()

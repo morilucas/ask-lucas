@@ -11,7 +11,12 @@ from pathlib import Path
 
 HEADING_PATTERN = re.compile(r"^##[ \t]+(.+?)[ \t]*$", re.MULTILINE)
 TITLE_PATTERN = re.compile(r"^#[ \t]+(.+?)[ \t]*$", re.MULTILINE)
-DEFAULT_EXCLUDED_SOURCE_IDS = frozenset({"profile:explicit-exclusions"})
+DEFAULT_EXCLUDED_SOURCE_IDS = frozenset(
+    {
+        "profile:explicit-exclusions",
+        "projects:evidence-gaps-to-resolve",
+    }
+)
 
 
 class ContentIngestionError(ValueError):
