@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import os
 import re
 import sqlite3
+import tempfile
 import threading
 import unicodedata
 from collections.abc import Sequence
+from contextlib import closing, suppress
 from pathlib import Path
 
 from ask_lucas.ingestion import (
@@ -120,47 +123,98 @@ def assert_fts5_available(connection: sqlite3.Connection) -> None:
         raise RetrievalError("This Python SQLite build does not provide FTS5.") from error
 
 
+def _create_temporary_index_path(destination: Path) -> Path:
+    """Reserve an unpredictable temporary file beside the active index."""
+
+    handle, name = tempfile.mkstemp(
+        prefix=f".{destination.name}.",
+        suffix=".rebuild",
+        dir=destination.parent,
+    )
+    os.close(handle)
+    return Path(name)
+
+
+def _discard_temporary_index(temporary_path: Path) -> None:
+    """Remove a temporary index and any SQLite sidecar file it produced."""
+
+    for suffix in ("", "-journal", "-wal", "-shm"):
+        with suppress(OSError):
+            Path(f"{temporary_path}{suffix}").unlink(missing_ok=True)
+
+
+def _write_index(
+    database_path: Path,
+    chunks: Sequence[ContentChunk],
+    fingerprint: str,
+) -> None:
+    """Populate an empty database with deterministic, source-ID-ordered records."""
+
+    with closing(_connect(database_path)) as connection, connection:
+        assert_fts5_available(connection)
+        connection.executescript(SCHEMA)
+        for chunk in sorted(chunks, key=lambda item: item.source_id):
+            values = (
+                chunk.source_id,
+                chunk.title,
+                chunk.section,
+                chunk.body,
+                chunk.indexed_text,
+                chunk.content_path,
+            )
+            connection.execute(
+                "INSERT INTO content_chunks VALUES (?, ?, ?, ?, ?, ?)",
+                values,
+            )
+            connection.execute(
+                "INSERT INTO content_fts VALUES (?, ?, ?, ?)",
+                (chunk.source_id, chunk.title, chunk.section, chunk.indexed_text),
+            )
+        connection.execute(
+            "INSERT INTO index_metadata (key, value) VALUES ('corpus_fingerprint', ?)",
+            (fingerprint,),
+        )
+        connection.execute(
+            "INSERT INTO index_metadata (key, value) VALUES ('schema_version', ?)",
+            (INDEX_SCHEMA_VERSION,),
+        )
+
+
+def _validate_index(database_path: Path, expected_records: int, fingerprint: str) -> None:
+    """Refuse to publish an index that is corrupt, incomplete, or mislabeled."""
+
+    with closing(_connect(database_path)) as connection:
+        integrity = connection.execute("PRAGMA integrity_check").fetchone()
+        chunk_count = connection.execute("SELECT count(*) FROM content_chunks").fetchone()[0]
+        fts_count = connection.execute("SELECT count(*) FROM content_fts").fetchone()[0]
+        metadata = dict(connection.execute("SELECT key, value FROM index_metadata").fetchall())
+
+    if integrity is None or str(integrity[0]) != "ok":
+        raise RetrievalError("The rebuilt index failed its integrity check.")
+    if int(chunk_count) != expected_records or int(fts_count) != expected_records:
+        raise RetrievalError("The rebuilt index does not hold every approved section.")
+    if metadata.get("corpus_fingerprint") != fingerprint:
+        raise RetrievalError("The rebuilt index recorded an unexpected corpus fingerprint.")
+    if metadata.get("schema_version") != INDEX_SCHEMA_VERSION:
+        raise RetrievalError("The rebuilt index recorded an unexpected schema version.")
+
+
 def rebuild_index(database_path: Path, chunks: Sequence[ContentChunk]) -> str:
-    """Replace the local index with deterministic, source-ID-ordered records."""
+    """Publish a fully built index over the active one in a single atomic step."""
 
     database_path.parent.mkdir(parents=True, exist_ok=True)
     fingerprint = corpus_fingerprint(list(chunks))
+    temporary_path = _create_temporary_index_path(database_path)
 
     try:
-        with _connect(database_path) as connection:
-            assert_fts5_available(connection)
-            connection.executescript(
-                "DROP TABLE IF EXISTS content_fts;"
-                "DROP TABLE IF EXISTS content_chunks;"
-                "DROP TABLE IF EXISTS index_metadata;"
-            )
-            connection.executescript(SCHEMA)
-            for chunk in sorted(chunks, key=lambda item: item.source_id):
-                values = (
-                    chunk.source_id,
-                    chunk.title,
-                    chunk.section,
-                    chunk.body,
-                    chunk.indexed_text,
-                    chunk.content_path,
-                )
-                connection.execute(
-                    "INSERT INTO content_chunks VALUES (?, ?, ?, ?, ?, ?)",
-                    values,
-                )
-                connection.execute(
-                    "INSERT INTO content_fts VALUES (?, ?, ?, ?)",
-                    (chunk.source_id, chunk.title, chunk.section, chunk.indexed_text),
-                )
-            connection.execute(
-                "INSERT INTO index_metadata (key, value) VALUES ('corpus_fingerprint', ?)",
-                (fingerprint,),
-            )
-            connection.execute(
-                "INSERT INTO index_metadata (key, value) VALUES ('schema_version', ?)",
-                (INDEX_SCHEMA_VERSION,),
-            )
-    except sqlite3.Error as error:
+        _write_index(temporary_path, chunks, fingerprint)
+        _validate_index(temporary_path, len(chunks), fingerprint)
+        os.replace(temporary_path, database_path)
+    except RetrievalError:
+        _discard_temporary_index(temporary_path)
+        raise
+    except (sqlite3.Error, OSError) as error:
+        _discard_temporary_index(temporary_path)
         raise RetrievalError("The approved-content index could not be rebuilt.") from error
 
     return fingerprint
@@ -169,7 +223,7 @@ def rebuild_index(database_path: Path, chunks: Sequence[ContentChunk]) -> str:
 def read_index_records(database_path: Path) -> list[tuple[str, str, str, str, str, str]]:
     """Read logical records in canonical order for deterministic rebuild tests."""
 
-    with _connect(database_path) as connection:
+    with closing(_connect(database_path)) as connection:
         rows = connection.execute(
             "SELECT source_id, title, section, body, indexed_text, content_path "
             "FROM content_chunks ORDER BY source_id"
@@ -199,7 +253,7 @@ class SQLiteRetriever:
         if not self.database_path.is_file():
             return None
         try:
-            with _connect(self.database_path) as connection:
+            with closing(_connect(self.database_path)) as connection:
                 metadata = dict(
                     connection.execute("SELECT key, value FROM index_metadata").fetchall()
                 )
@@ -237,7 +291,7 @@ class SQLiteRetriever:
 
         self.ensure_index()
         try:
-            with _connect(self.database_path) as connection:
+            with closing(_connect(self.database_path)) as connection:
                 rows = connection.execute(
                     """
                     SELECT

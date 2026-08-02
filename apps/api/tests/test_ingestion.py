@@ -9,6 +9,7 @@ from ask_lucas.ingestion import (
     corpus_fingerprint,
     heading_slug,
     load_approved_content,
+    redact_content_paths,
 )
 
 
@@ -83,3 +84,19 @@ def test_source_ids_are_stable_when_unrelated_body_text_changes(tmp_path: Path) 
 def test_missing_content_directory_fails_clearly(tmp_path: Path) -> None:
     with pytest.raises(ContentIngestionError, match="does not exist"):
         load_approved_content(tmp_path / "missing")
+
+
+def test_redaction_removes_configured_and_resolved_content_locations(tmp_path: Path) -> None:
+    content_dir = tmp_path / "content"
+    content_dir.mkdir()
+    unresolved_dir = tmp_path / "link" / ".." / "content"
+    message = f"Approved content directory does not exist: {content_dir}"
+
+    assert redact_content_paths(message, content_dir) == (
+        "Approved content directory does not exist: <content-dir>"
+    )
+    assert str(tmp_path) not in redact_content_paths(f"read {content_dir}/profile.md", content_dir)
+    assert str(tmp_path) not in redact_content_paths(message, unresolved_dir)
+    assert redact_content_paths("Duplicate canonical source ID: a:b", content_dir) == (
+        "Duplicate canonical source ID: a:b"
+    )

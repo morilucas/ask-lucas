@@ -98,6 +98,16 @@ def load_approved_content(
     return sorted(chunks, key=lambda chunk: chunk.source_id)
 
 
+def redact_content_paths(message: str, content_dir: Path) -> str:
+    """Remove approved-content locations from operator-facing text."""
+
+    candidates = {str(content_dir), str(Path(content_dir).expanduser().resolve())}
+    redacted = message
+    for candidate in sorted(candidates, key=len, reverse=True):
+        redacted = redacted.replace(candidate, "<content-dir>")
+    return redacted
+
+
 def corpus_fingerprint(chunks: list[ContentChunk]) -> str:
     """Return a stable digest of the exact logical records in an index."""
 
