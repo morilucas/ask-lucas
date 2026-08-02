@@ -1,7 +1,11 @@
 # ADR 0003: implement the editorial UI with web-platform primitives
 
-Status: Accepted
+Status: Partially superseded by ADR 0008
 Date: 2026-08-01
+
+ADR 0008 replaces the editorial visual hierarchy and font direction with a chat-first interface.
+The decisions here about CSS Modules, web-platform primitives, native dialog, bounded motion, and a
+small client boundary remain in force.
 
 ## Context
 

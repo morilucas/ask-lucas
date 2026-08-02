@@ -1,6 +1,6 @@
 # Feature 005: Premium chat interface
 
-Status: Implemented and verified locally
+Status: Implemented and deployed
 Date: 2026-08-02
 
 ## Intent
@@ -47,3 +47,10 @@ and evidence treatment rather than copying a template or adding a generic produc
 
 - [Vercel Chatbot template](https://vercel.com/templates/other/chatbot)
 - [Vercel AI Elements](https://elements.ai-sdk.dev/)
+
+## Verification record
+
+Deployed in release `e4a8b47` on 2026-08-02. Lint, strict TypeScript, the production build, and 12
+Edge browser journeys passed. Desktop and 320-pixel captures verified the empty, grounded-answer,
+citation, transcript, and composer layouts. Production health and chat-first HTML checks passed at
+`https://ask.lkmori.com`.
