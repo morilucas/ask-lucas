@@ -1,6 +1,6 @@
 # Feature 008: flagship portfolio content seed
 
-Status: Approved for implementation
+Status: Implemented and deployed
 Date: 2026-08-02
 
 ## Intent
@@ -57,4 +57,3 @@ and one that requires it to identify prototype status without claiming productio
 - Existing privacy, unsupported, and prompt-injection evaluations remain present.
 - No raw performance review, internal document, customer-level result, colleague name, or prohibited
   implementation detail enters either repository.
-
