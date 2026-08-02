@@ -21,6 +21,7 @@ export default function Home() {
             width={128}
             height={128}
             priority
+            unoptimized
           />
           <span className={styles.identityText}>
             <span className={styles.wordmark}>Ask Lucas</span>
