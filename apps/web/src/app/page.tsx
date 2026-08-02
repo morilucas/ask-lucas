@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { AnswerWorkspace } from "@/components/answer-workspace";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -12,7 +14,14 @@ export default function Home() {
 
       <header className={styles.header}>
         <div className={styles.identity}>
-          <span className={styles.mark} aria-hidden="true">L</span>
+          <Image
+            className={styles.profilePhoto}
+            src="/lucas-profile.webp"
+            alt="Lucas Mori"
+            width={128}
+            height={128}
+            priority
+          />
           <span className={styles.identityText}>
             <span className={styles.wordmark}>Ask Lucas</span>
             <span className={styles.descriptor}>AI portfolio assistant</span>

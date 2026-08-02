@@ -10,7 +10,7 @@ Ask Lucas is a simple, polished AI portfolio for anyone participating in a hirin
 
 The biography is the system's test domain. The primary product outcome is an enjoyable demonstration of applied AI engineering: grounded retrieval, inspectable citations, evaluation, observability, sensible privacy boundaries, and deliberate iteration from a small baseline.
 
-The visual identity is typography- and interaction-led. The product does not use Lucas's portrait or an AI avatar; LinkedIn remains the conventional visual profile.
+The visual identity is typography- and interaction-led. The global header carries a small, approved photo of Lucas as the product's single portrait; no AI avatar or decorative photo appears elsewhere, and LinkedIn remains the conventional visual profile.
 
 ## Desired impression
 
@@ -112,7 +112,7 @@ This milestone is part of the project scope even if lexical retrieval remains th
 - Agent frameworks or multi-agent workflows
 - External observability vendors
 - Fine-tuning
-- Portraits, avatars, decorative AI imagery, and hero illustrations
+- Decorative avatars, AI-generated imagery, and hero illustrations beyond the single approved header portrait
 
 ## Why the baseline is intentionally simple
 
@@ -144,7 +144,7 @@ The planned next experiment is semantic or hybrid retrieval with PostgreSQL and 
 - Each request produces a trace ID with retrieval, generation, and total duration.
 - Mock mode runs the complete product locally without paid API access.
 - The visual system is controlled by a small set of type, spacing, color, motion, radius, and shadow tokens.
-- The interface works as a portrait-free adaptive chat composition at mobile and desktop widths.
+- Outside the single approved header portrait, the interface works as a portrait-free adaptive chat composition at mobile and desktop widths.
 - The raw LinkedIn PDF and its personal contact details never enter the repository or retrieval index.
 
 ## Constraints

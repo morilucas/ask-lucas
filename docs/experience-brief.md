@@ -8,7 +8,8 @@ Last updated: 2026-08-02
 
 Ask Lucas is a chat product first and a portfolio page second. The page should feel as considered as
 a modern commercial AI interface while staying smaller and more transparent than a general-purpose
-assistant. It uses no portrait or photograph; LinkedIn remains the conventional professional profile.
+assistant. The global header carries the single approved photo of Lucas; no other portrait or photograph
+appears, and LinkedIn remains the conventional professional profile elsewhere.
 
 ## Desired first impression
 
@@ -23,13 +24,13 @@ Within five seconds, a visitor should understand:
 
 The interface fills the viewport and has three stable layers:
 
-1. A compact global header with the Ask Lucas identity, grounded status, appearance control, and
-   professional links.
+1. A compact global header with Lucas's photo, the Ask Lucas identity, grounded status, appearance
+   control, and professional links.
 2. A conversation workspace with a small toolbar and independently scrolling content.
 3. A bottom composer that remains available without covering messages.
 
-There is no sidebar, marketing hero, portrait, authentication, model picker, attachment control, or
-persisted history in the MVP.
+There is no sidebar, marketing hero, authentication, model picker, attachment control, or persisted
+history in the MVP.
 
 ## Empty state
 

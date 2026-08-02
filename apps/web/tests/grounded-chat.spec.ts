@@ -106,6 +106,14 @@ test("suggestion, grounded answer, follow-up, evidence, and new conversation", a
   ).toBeVisible();
 });
 
+test("the header shows exactly one Lucas Mori profile photo", async ({ page }) => {
+  await page.goto("/");
+
+  const profilePhoto = page.getByRole("img", { name: "Lucas Mori", exact: true });
+  await expect(profilePhoto).toHaveCount(1);
+  await expect(profilePhoto).toHaveAttribute("src", /lucas-profile\.webp/);
+});
+
 test("the empty and evidence states do not create horizontal overflow", async ({ page }) => {
   await page.goto("/");
 
