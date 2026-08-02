@@ -13,6 +13,7 @@ export class ApiError extends Error {
   readonly code: string;
   readonly traceId: string;
   readonly retryable: boolean;
+  readonly retryAfterSeconds?: number;
 
   constructor(payload: ErrorEnvelope) {
     super(payload.message);
@@ -20,6 +21,7 @@ export class ApiError extends Error {
     this.code = payload.code;
     this.traceId = payload.trace_id;
     this.retryable = payload.retryable;
+    this.retryAfterSeconds = payload.retry_after_seconds ?? undefined;
   }
 }
 

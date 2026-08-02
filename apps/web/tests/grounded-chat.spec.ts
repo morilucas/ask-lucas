@@ -85,3 +85,33 @@ test("the empty and evidence states do not create horizontal overflow", async ({
   }));
   expect(evidenceWidths.scroll).toBeLessThanOrEqual(evidenceWidths.client);
 });
+
+test("a public rate limit gives specific retry guidance and preserves the question", async ({
+  page,
+}) => {
+  await page.route("**/v1/chat", async (route) => {
+    await route.fulfill({
+      status: 429,
+      headers: { "Content-Type": "application/json", "Retry-After": "37" },
+      body: JSON.stringify({
+        code: "rate_limited",
+        message: "You've asked several questions quickly. Please wait about 37 seconds and try again.",
+        trace_id: "rate-limit-trace",
+        retryable: true,
+        retry_after_seconds: 37,
+      }),
+    });
+  });
+  await page.goto("/");
+
+  const input = page.getByLabel("Message Ask Lucas", { exact: true });
+  await input.fill(SHOWCASE_QUESTION);
+  await input.press("Enter");
+
+  await expect(page.getByText(SHOWCASE_QUESTION, { exact: true })).toBeVisible();
+  await expect(page.getByText("Please wait about 37 seconds", { exact: false })).toBeVisible();
+  await expect(page.getByText("Trace rate-limit-trace", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Try again in about 37s", exact: true }),
+  ).toBeVisible();
+});

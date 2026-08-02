@@ -122,6 +122,8 @@ export interface components {
             code: string;
             /** Message */
             message: string;
+            /** Retry After Seconds */
+            retry_after_seconds?: number | null;
             /** Retryable */
             retryable: boolean;
             /** Trace Id */
@@ -311,6 +313,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Service Unavailable */
             503: {
                 headers: {
@@ -346,6 +357,15 @@ export interface operations {
             };
             /** @description Unprocessable Entity */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

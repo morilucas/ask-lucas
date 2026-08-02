@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from ask_lucas.config import Settings
@@ -22,7 +23,12 @@ TEST_SOURCE = Source(
 )
 
 
-def make_client(tmp_path: Path, answer_service: object | None = None) -> TestClient:
+def make_client(
+    tmp_path: Path,
+    answer_service: object | None = None,
+    *,
+    rate_limit_requests: int = 12,
+) -> TestClient:
     app = create_app(
         settings=Settings(
             build_version="test",
@@ -30,6 +36,8 @@ def make_client(tmp_path: Path, answer_service: object | None = None) -> TestCli
             content_dir=APPROVED_CONTENT,
             answer_fixture_path=ANSWER_FIXTURE,
             index_path=tmp_path / "content.db",
+            runtime_db_path=tmp_path / "runtime.db",
+            rate_limit_requests=rate_limit_requests,
         ),
         answer_service=answer_service,  # type: ignore[arg-type]
     )
@@ -209,3 +217,36 @@ def test_provider_failure_is_recoverable_and_safe(tmp_path: Path) -> None:
     assert response.json()["code"] == "provider_unavailable"
     assert response.json()["retryable"] is True
     assert "exception" not in response.text.casefold()
+
+
+def test_answer_rate_limit_has_retry_contract(tmp_path: Path) -> None:
+    client = make_client(tmp_path, rate_limit_requests=2)
+
+    for _ in range(2):
+        response = client.post("/v1/answer", json={"question": "What has Lucas built?"})
+        assert response.status_code == 200
+    response = client.post("/v1/answer", json={"question": "What has Lucas built?"})
+
+    assert response.status_code == 429
+    assert response.headers["Retry-After"] == "60"
+    assert response.json()["code"] == "rate_limited"
+    assert response.json()["retry_after_seconds"] == 60
+    assert response.json()["trace_id"] == response.headers[TRACE_HEADER]
+
+
+def test_structured_answer_log_excludes_question_and_client_address(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    private_question = "Private marker that must never be logged"
+    logger_name = "uvicorn.error.ask_lucas.requests"
+    caplog.set_level("INFO", logger=logger_name)
+
+    response = make_client(tmp_path).post("/v1/answer", json={"question": private_question})
+
+    assert response.status_code == 200
+    records = [record.message for record in caplog.records if record.name == logger_name]
+    assert records
+    assert '"event":"answer_request"' in records[-1]
+    assert response.headers[TRACE_HEADER] in records[-1]
+    assert private_question not in records[-1]
+    assert "testclient" not in records[-1]

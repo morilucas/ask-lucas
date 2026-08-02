@@ -39,12 +39,28 @@ class Settings(BaseSettings):
     anthropic_api_key: SecretStr | None = None
     anthropic_model: str = "claude-haiku-4-5"
     anthropic_timeout_seconds: float = 30.0
+    rate_limit_requests: int = 12
+    rate_limit_window_seconds: int = 60
+    max_concurrent_generations: int = 2
+    daily_live_generation_limit: int = 100
+    runtime_db_path: Path = REPOSITORY_ROOT / "apps" / "api" / "data" / "runtime.db"
+    trusted_proxy_cidrs: str = "127.0.0.1/32,::1/128"
 
     @property
     def allowed_origin_list(self) -> list[str]:
         """Return normalized, non-empty CORS origins."""
 
         return [origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()]
+
+    @property
+    def trusted_proxy_cidr_list(self) -> list[str]:
+        """Return normalized proxy networks used when accepting forwarded client addresses."""
+
+        return [
+            network.strip()
+            for network in self.trusted_proxy_cidrs.split(",")
+            if network.strip()
+        ]
 
 
 @lru_cache

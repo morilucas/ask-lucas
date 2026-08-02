@@ -1,6 +1,9 @@
 """FastAPI application factory and public routes."""
 
+import json
+import logging
 from collections.abc import Awaitable, Callable
+from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
@@ -8,6 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 
@@ -21,8 +25,17 @@ from ask_lucas.fixtures import (
     RetrievalUnavailable,
     validate_answer_sources,
 )
-from ask_lucas.ports import AnswerService
+from ask_lucas.ports import AnswerProvider, AnswerService
 from ask_lucas.retrieval import SQLiteRetriever
+from ask_lucas.runtime_safety import (
+    DailyGenerationLedger,
+    DailyGenerationLimitExceeded,
+    GenerationCapacityExceeded,
+    GuardedLiveAnswerProvider,
+    RateLimitExceeded,
+    SlidingWindowRateLimiter,
+    request_client_key,
+)
 from ask_lucas.schemas import (
     AnswerRequest,
     AnswerResponse,
@@ -38,6 +51,7 @@ from ask_lucas.schemas import (
 from ask_lucas.service import RetrievalAnswerService
 
 TRACE_HEADER = "X-Trace-ID"
+LOGGER = logging.getLogger("uvicorn.error.ask_lucas.requests")
 
 
 def contextual_retrieval_query(messages: list[ConversationMessage]) -> str:
@@ -49,7 +63,7 @@ def contextual_retrieval_query(messages: list[ConversationMessage]) -> str:
 
 def configured_provider(
     settings: Settings,
-) -> FixtureAnswerProvider | GroundedExtractiveProvider | AnthropicAnswerProvider:
+) -> AnswerProvider:
     fixtures = FixtureAnswerProvider.from_path(settings.answer_fixture_path)
     provider = settings.provider.casefold()
     if provider not in {"auto", "anthropic", "claude", "extractive", "fixture"}:
@@ -61,10 +75,18 @@ def configured_provider(
     if provider in {"anthropic", "claude"} and not api_key:
         raise ValueError("ASK_LUCAS_ANTHROPIC_API_KEY is required for the Claude provider.")
     if provider in {"anthropic", "claude"} or (provider == "auto" and api_key):
-        return AnthropicAnswerProvider(
+        live_provider = AnthropicAnswerProvider(
             api_key=api_key or "",
             model=settings.anthropic_model,
             timeout_seconds=settings.anthropic_timeout_seconds,
+        )
+        return GuardedLiveAnswerProvider(
+            live_provider,
+            max_concurrent_generations=settings.max_concurrent_generations,
+            ledger=DailyGenerationLedger(
+                settings.runtime_db_path,
+                limit=settings.daily_live_generation_limit,
+            ),
         )
     if provider == "fixture":
         return fixtures
@@ -82,6 +104,7 @@ def _error(
     code: str,
     message: str,
     retryable: bool,
+    retry_after_seconds: int | None = None,
 ) -> JSONResponse:
     trace_id = _trace_id(request)
     payload = ErrorEnvelope(
@@ -89,11 +112,16 @@ def _error(
         message=message,
         trace_id=trace_id,
         retryable=retryable,
+        retry_after_seconds=retry_after_seconds,
     )
+    request.state.outcome = code
+    headers = {TRACE_HEADER: trace_id}
+    if retry_after_seconds is not None:
+        headers["Retry-After"] = str(retry_after_seconds)
     return JSONResponse(
         status_code=status_code,
         content=payload.model_dump(mode="json"),
-        headers={TRACE_HEADER: trace_id},
+        headers=headers,
     )
 
 
@@ -110,6 +138,10 @@ def create_app(
     )
     app = FastAPI(title="Ask Lucas API", version="0.1.0")
     app.state.answer_service = service
+    app.state.rate_limiter = SlidingWindowRateLimiter(
+        requests=resolved_settings.rate_limit_requests,
+        window_seconds=resolved_settings.rate_limit_window_seconds,
+    )
 
     app.add_middleware(
         CORSMiddleware,
@@ -126,8 +158,25 @@ def create_app(
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         request.state.trace_id = uuid4().hex
+        started = perf_counter()
         response = await call_next(request)
         response.headers[TRACE_HEADER] = _trace_id(request)
+        if request.url.path in {"/v1/answer", "/v1/chat"}:
+            LOGGER.info(
+                json.dumps(
+                    {
+                        "event": "answer_request",
+                        "trace_id": _trace_id(request),
+                        "route": request.url.path,
+                        "status_code": response.status_code,
+                        "outcome": getattr(request.state, "outcome", "unknown"),
+                        "provider_mode": getattr(request.state, "provider_mode", None),
+                        "model": getattr(request.state, "model", None),
+                        "total_ms": round((perf_counter() - started) * 1000, 2),
+                    },
+                    separators=(",", ":"),
+                )
+            )
         return response
 
     @app.exception_handler(RequestValidationError)
@@ -184,17 +233,66 @@ def create_app(
             next_experiment="Measure Recall@3, then compare lexical and semantic retrieval.",
         )
 
-    @app.post(
-        "/v1/answer",
-        response_model=AnswerResponse,
-        responses={422: {"model": ErrorEnvelope}, 503: {"model": ErrorEnvelope}},
-    )
-    async def answer(request: Request, payload: AnswerRequest) -> Any:
+    async def execute_answer(
+        request: Request,
+        question: str,
+        *,
+        retrieval_question: str | None = None,
+        history: tuple[ConversationMessage, ...] = (),
+    ) -> Any:
         try:
-            result = app.state.answer_service.answer(payload.question, _trace_id(request))
+            client_key = request_client_key(
+                request, resolved_settings.trusted_proxy_cidr_list
+            )
+            app.state.rate_limiter.check(client_key)
+            if retrieval_question is None and not history:
+                result = await run_in_threadpool(
+                    app.state.answer_service.answer, question, _trace_id(request)
+                )
+            else:
+                result = await run_in_threadpool(
+                    app.state.answer_service.answer,
+                    question,
+                    _trace_id(request),
+                    retrieval_question=retrieval_question,
+                    history=history,
+                )
             if isinstance(result, GroundedAnswer):
                 validate_answer_sources(result)
+            request.state.outcome = result.kind
+            request.state.provider_mode = result.trace.provider_mode
+            request.state.model = result.trace.model
             return result
+        except RateLimitExceeded as error:
+            return _error(
+                request,
+                status_code=429,
+                code="rate_limited",
+                message=(
+                    "You've asked several questions quickly. "
+                    f"Please wait about {error.retry_after_seconds} seconds and try again."
+                ),
+                retryable=True,
+                retry_after_seconds=error.retry_after_seconds,
+            )
+        except GenerationCapacityExceeded:
+            return _error(
+                request,
+                status_code=503,
+                code="generation_busy",
+                message="Ask Lucas is helping other visitors right now. Please try again shortly.",
+                retryable=True,
+                retry_after_seconds=2,
+            )
+        except DailyGenerationLimitExceeded as error:
+            return _error(
+                request,
+                status_code=503,
+                code="daily_generation_limit",
+                message="Ask Lucas has reached today's AI usage limit. Please come back tomorrow.",
+                retryable=False,
+                retry_after_seconds=error.retry_after_seconds,
+            )
         except InvalidAnswerOutput:
             return _error(
                 request,
@@ -221,47 +319,35 @@ def create_app(
             )
 
     @app.post(
+        "/v1/answer",
+        response_model=AnswerResponse,
+        responses={
+            422: {"model": ErrorEnvelope},
+            429: {"model": ErrorEnvelope},
+            503: {"model": ErrorEnvelope},
+        },
+    )
+    async def answer(request: Request, payload: AnswerRequest) -> Any:
+        return await execute_answer(request, payload.question)
+
+    @app.post(
         "/v1/chat",
         response_model=AnswerResponse,
-        responses={422: {"model": ErrorEnvelope}, 503: {"model": ErrorEnvelope}},
+        responses={
+            422: {"model": ErrorEnvelope},
+            429: {"model": ErrorEnvelope},
+            503: {"model": ErrorEnvelope},
+        },
     )
     async def chat(request: Request, payload: ChatRequest) -> Any:
         question = payload.messages[-1].content
         history = tuple(payload.messages[:-1])
-        try:
-            result = app.state.answer_service.answer(
-                question,
-                _trace_id(request),
-                retrieval_question=contextual_retrieval_query(payload.messages),
-                history=history,
-            )
-            if isinstance(result, GroundedAnswer):
-                validate_answer_sources(result)
-            return result
-        except InvalidAnswerOutput:
-            return _error(
-                request,
-                status_code=503,
-                code="invalid_provider_output",
-                message="The answer could not be safely validated. Please try again.",
-                retryable=True,
-            )
-        except AnswerUnavailable:
-            return _error(
-                request,
-                status_code=503,
-                code="provider_unavailable",
-                message="The answer could not be completed. Please try again.",
-                retryable=True,
-            )
-        except RetrievalUnavailable:
-            return _error(
-                request,
-                status_code=503,
-                code="retrieval_unavailable",
-                message="The approved sources could not be searched. Please try again.",
-                retryable=True,
-            )
+        return await execute_answer(
+            request,
+            question,
+            retrieval_question=contextual_retrieval_query(payload.messages),
+            history=history,
+        )
 
     return app
 

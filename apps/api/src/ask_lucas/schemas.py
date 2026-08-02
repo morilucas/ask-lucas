@@ -141,3 +141,4 @@ class ErrorEnvelope(StrictModel):
     message: str
     trace_id: str
     retryable: bool
+    retry_after_seconds: int | None = Field(default=None, ge=1)

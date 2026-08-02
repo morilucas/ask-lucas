@@ -17,7 +17,13 @@ import styles from "./answer-workspace.module.css";
 type ExchangeState =
   | { status: "pending" }
   | { status: "complete"; answer: AnswerResponse }
-  | { status: "error"; message: string; traceId?: string };
+  | {
+      status: "error";
+      message: string;
+      traceId?: string;
+      retryable: boolean;
+      retryAfterSeconds?: number;
+    };
 
 type Exchange = {
   id: string;
@@ -103,10 +109,17 @@ export function AnswerWorkspace() {
       }
       const state: ExchangeState =
         error instanceof ApiError
-          ? { status: "error", message: error.message, traceId: error.traceId }
+          ? {
+              status: "error",
+              message: error.message,
+              traceId: error.traceId,
+              retryable: error.retryable,
+              retryAfterSeconds: error.retryAfterSeconds,
+            }
           : {
               status: "error",
               message: "The assistant could not be reached. Please try again.",
+              retryable: true,
             };
       setExchanges((current) =>
         current.map((exchange) => (exchange.id === id ? { ...exchange, state } : exchange)),
@@ -194,12 +207,16 @@ export function AnswerWorkspace() {
                   <div className={styles.error}>
                     <p>{exchange.state.message}</p>
                     {exchange.state.traceId ? <p>Trace {exchange.state.traceId}</p> : null}
-                    <button
-                      type="button"
-                      onClick={() => void submitQuestion(exchange.question, exchange.id)}
-                    >
-                      Try again
-                    </button>
+                    {exchange.state.retryable ? (
+                      <button
+                        type="button"
+                        onClick={() => void submitQuestion(exchange.question, exchange.id)}
+                      >
+                        {exchange.state.retryAfterSeconds
+                          ? `Try again in about ${exchange.state.retryAfterSeconds}s`
+                          : "Try again"}
+                      </button>
+                    ) : null}
                   </div>
                 ) : null}
               </article>
