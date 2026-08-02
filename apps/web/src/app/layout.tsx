@@ -3,6 +3,13 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
 
+const themeInitializer = `
+  try {
+    const savedTheme = localStorage.getItem("ask-lucas-theme");
+    document.documentElement.dataset.theme = savedTheme === "light" ? "light" : "dark";
+  } catch {}
+`;
+
 const geist = Geist({
   subsets: ["latin"],
   variable: "--font-sans",
@@ -23,7 +30,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geist.variable} ${geistMono.variable}`}>
+    <html
+      lang="en"
+      className={`${geist.variable} ${geistMono.variable}`}
+      data-theme="dark"
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitializer }} />
+      </head>
       <body>{children}</body>
     </html>
   );

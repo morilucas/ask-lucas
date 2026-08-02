@@ -3,6 +3,28 @@ import { expect, test } from "@playwright/test";
 const SHOWCASE_QUESTION = "What AI and data systems has Lucas built?";
 const SOURCE_SECTION = "Acme — AI & Data Engineer";
 
+test("dark is the default and the light preference persists", async ({ page }) => {
+  await page.goto("/");
+
+  const root = page.locator("html");
+  await expect(root).toHaveAttribute("data-theme", "dark");
+
+  const useLightTheme = page.getByRole("button", { name: "Use light theme", exact: true });
+  await expect(useLightTheme).toBeVisible();
+  await useLightTheme.click();
+
+  await expect(root).toHaveAttribute("data-theme", "light");
+  await expect(
+    page.getByRole("button", { name: "Use dark theme", exact: true }),
+  ).toBeVisible();
+
+  await page.reload();
+  await expect(root).toHaveAttribute("data-theme", "light");
+  await expect(
+    page.getByRole("button", { name: "Use dark theme", exact: true }),
+  ).toBeVisible();
+});
+
 test("suggestion, grounded answer, follow-up, evidence, and new conversation", async ({ page }) => {
   await page.goto("/");
 

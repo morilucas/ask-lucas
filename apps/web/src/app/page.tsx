@@ -1,4 +1,5 @@
 import { AnswerWorkspace } from "@/components/answer-workspace";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 import styles from "./page.module.css";
 
@@ -22,6 +23,7 @@ export default function Home() {
             <span aria-hidden="true" />
             Grounded in reviewed sources
           </span>
+          <ThemeToggle />
           <nav aria-label="Professional links">
             <a className={styles.headerLink} href="https://www.linkedin.com/in/morilucas/">
               LinkedIn

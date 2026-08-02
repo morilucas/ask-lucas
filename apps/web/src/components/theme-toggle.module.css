@@ -1,0 +1,50 @@
+.toggle {
+  min-height: 2.15rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.65rem;
+  color: var(--color-muted);
+  background: var(--color-card);
+  border: 1px solid var(--color-rule);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition:
+    color var(--motion-fast) ease,
+    background var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    transform var(--motion-fast) var(--ease-out);
+}
+
+.toggle:hover {
+  color: var(--color-ink);
+  border-color: var(--color-rule-strong);
+  transform: translateY(-1px);
+}
+
+.toggle svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.45;
+}
+
+@media (max-width: 32rem) {
+  .toggle {
+    width: 2.15rem;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .toggle span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}

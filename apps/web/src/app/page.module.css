@@ -5,8 +5,9 @@
   grid-template-rows: 4.25rem minmax(0, 1fr);
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% 0%, rgb(238 242 255 / 55%), transparent 28rem),
+    radial-gradient(circle at 50% 0%, var(--color-glow), transparent 28rem),
     var(--color-canvas);
+  transition: background-color var(--motion-medium) ease;
 }
 
 .skipLink {
@@ -15,8 +16,8 @@
   top: 0.75rem;
   left: 0.75rem;
   padding: 0.7rem 1rem;
-  color: #fff;
-  background: var(--color-ink);
+  color: var(--color-message-user-text);
+  background: var(--color-accent);
   border-radius: 0.65rem;
   transform: translateY(-160%);
   transition: transform var(--motion-fast) var(--ease-out);
@@ -35,7 +36,7 @@
   justify-content: space-between;
   gap: 1.5rem;
   padding-inline: clamp(1rem, 3vw, 2rem);
-  background: rgb(255 255 255 / 78%);
+  background: var(--color-header);
   border-bottom: 1px solid var(--color-rule);
   backdrop-filter: blur(20px) saturate(160%);
 }
@@ -60,10 +61,10 @@
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  color: #fff;
-  background: var(--color-ink);
+  color: var(--color-message-user-text);
+  background: linear-gradient(145deg, var(--color-accent), var(--color-accent-bright));
   border-radius: 0.62rem;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 24%);
   font-size: 0.85rem;
   font-weight: 650;
   letter-spacing: -0.03em;

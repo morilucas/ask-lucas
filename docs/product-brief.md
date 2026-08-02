@@ -72,8 +72,9 @@ These are useful demonstration prompts, not a claim that biography coverage is t
 
 ### Included
 
-- One responsive, typography-first page with a warm light theme and easily replaceable visual tokens
-- An editorial answer canvas without portraits, avatars, or message bubbles
+- One responsive, dark-first chat page with a persistent light option and easily replaceable visual
+  tokens
+- A portrait-free conversation canvas with distinct outgoing and incoming message treatments
 - One responsive Inspector for evidence and system metadata
 - Single-turn question answering
 - A small reviewed Markdown knowledge base delivered from a private content repository
@@ -112,7 +113,6 @@ This milestone is part of the project scope even if lexical retrieval remains th
 - External observability vendors
 - Fine-tuning
 - Portraits, avatars, decorative AI imagery, and hero illustrations
-- Dark mode and a theme switcher
 
 ## Why the baseline is intentionally simple
 
@@ -144,7 +144,7 @@ The planned next experiment is semantic or hybrid retrieval with PostgreSQL and 
 - Each request produces a trace ID with retrieval, generation, and total duration.
 - Mock mode runs the complete product locally without paid API access.
 - The visual system is controlled by a small set of type, spacing, color, motion, radius, and shadow tokens.
-- The interface works as a portrait-free editorial composition at mobile and desktop widths.
+- The interface works as a portrait-free adaptive chat composition at mobile and desktop widths.
 - The raw LinkedIn PDF and its personal contact details never enter the repository or retrieval index.
 
 ## Constraints

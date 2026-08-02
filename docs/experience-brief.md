@@ -23,7 +23,8 @@ Within five seconds, a visitor should understand:
 
 The interface fills the viewport and has three stable layers:
 
-1. A compact global header with the Ask Lucas identity, grounded status, and professional links.
+1. A compact global header with the Ask Lucas identity, grounded status, appearance control, and
+   professional links.
 2. A conversation workspace with a small toolbar and independently scrolling content.
 3. A bottom composer that remains available without covering messages.
 
@@ -39,7 +40,7 @@ role fit. They are shortcuts into the same chat API, not static question-and-ans
 ## Conversation
 
 - User prompts are compact, right-aligned bubbles labeled `You`.
-- Assistant responses align to an `L` monogram and use open prose rather than a large bubble.
+- Assistant responses align to an `L` monogram and use a quiet neutral incoming-message surface.
 - Follow-up questions remain in the visible in-tab transcript.
 - Inline citation controls sit directly beside supported claims.
 - Source count, latency, and model mode appear as quiet metadata after a grounded answer.
@@ -63,7 +64,12 @@ limitations, and next-experiment data without exposing prompts or hidden reasoni
 ## Visual system
 
 - Geist for interface and answer text; Geist Mono for technical metadata.
-- Near-white canvas, white surfaces, neutral borders, restrained shadows, and a single indigo accent.
+- Dark mode is the intentional first-load default; a persistent control exposes a complete light mode.
+- The palette uses adaptive semantic tokens rather than inverted colors: true-black and charcoal
+  surfaces in dark mode, soft system grays in light mode, and system blue for outgoing messages and
+  primary actions.
+- Translucent header and composer surfaces borrow the clarity of familiar messaging products without
+  reproducing their branding or hiding evidence controls.
 - Green communicates the reviewed-source/available state; red is reserved for actionable errors.
 - Small inline SVG icons avoid an icon-library dependency.
 - Motion is limited to short opacity/transform transitions and is removed for reduced-motion users.
@@ -80,6 +86,7 @@ evidence drawer, validation, and long technical identifiers must not create hori
 
 - One visible page heading exists in the empty state.
 - Every icon-only control has an accessible name.
+- The appearance control has an accurate action label in both states and is keyboard operable.
 - Keyboard submit, focus return, Escape dismissal, live status announcements, and visible focus rings
   are required behavior.
 - Color is never the only indication of state.
@@ -89,3 +96,4 @@ evidence drawer, validation, and long technical identifiers must not create hori
 
 - [Vercel Chatbot template](https://vercel.com/templates/other/chatbot)
 - [Vercel AI Elements](https://elements.ai-sdk.dev/)
+- [Apple Human Interface Guidelines: Dark Mode](https://developer.apple.com/design/human-interface-guidelines/dark-mode)
