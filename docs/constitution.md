@@ -15,7 +15,12 @@ Raw resumes, LinkedIn exports, private messages, internal documents, personal co
 
 ## 3. Privacy and employer confidentiality
 
-The system must not reveal or infer sensitive personal information or nonpublic employer information. Public descriptions of named internal products are allowed only at the level approved by Lucas; underlying data, prompts, documentation, metrics, and implementation details remain out of scope.
+The system must not reveal or infer sensitive personal information or nonpublic employer information.
+Public descriptions of named internal projects and tools, together with aggregate adoption,
+performance, scale, and business-impact metrics, are allowed only when Lucas explicitly approves the
+exact claim, definition, and time period. Raw data, customer-specific outcomes, internal documents or
+links, prompts, code, credentials, table or field names, access-control details, personal data, and
+nonpublic implementation details remain out of scope.
 
 ## 4. Specifications are the source of intent
 
