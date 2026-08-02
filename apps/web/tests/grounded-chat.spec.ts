@@ -39,9 +39,21 @@ test("suggestion, grounded answer, follow-up, evidence, and new conversation", a
     exact: true,
   });
   await secondCitation.click();
-  await page.getByRole("button", { name: "Close evidence", exact: true }).click();
+  await page.getByRole("button", { name: "Close inspector", exact: true }).click();
   await expect(evidenceDialog).toBeHidden();
   await expect(secondCitation).toBeFocused();
+
+  const systemLens = page.getByRole("button", { name: "System lens", exact: true });
+  await systemLens.click();
+  const systemDialog = page.getByRole("dialog", {
+    name: "How this answer was made",
+    exact: true,
+  });
+  await expect(systemDialog).toBeVisible();
+  await expect(systemDialog.getByText("sqlite-fts5", { exact: true })).toBeVisible();
+  await expect(systemDialog.getByText("experience:acme-ai-data-engineer", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Close inspector", exact: true }).click();
+  await expect(systemLens).toBeFocused();
 
   const input = page.getByLabel("Message Ask Lucas", { exact: true });
   await input.fill("Which tools did he use?");
@@ -59,6 +71,9 @@ test("suggestion, grounded answer, follow-up, evidence, and new conversation", a
       "The synthetic public dataset does not contain a reviewed answer for that question.",
       { exact: false },
     ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: SHOWCASE_QUESTION, exact: true }),
   ).toBeVisible();
 });
 
@@ -109,9 +124,127 @@ test("a public rate limit gives specific retry guidance and preserves the questi
   await input.press("Enter");
 
   await expect(page.getByText(SHOWCASE_QUESTION, { exact: true })).toBeVisible();
-  await expect(page.getByText("Please wait about 37 seconds", { exact: false })).toBeVisible();
+  await expect(
+    page.getByRole("article").getByText("Please wait about 37 seconds", { exact: false }),
+  ).toBeVisible();
   await expect(page.getByText("Trace rate-limit-trace", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Try again in about 37s", exact: true }),
   ).toBeVisible();
+});
+
+test("composer validation and interrupted requests preserve editable questions", async ({ page }) => {
+  await page.goto("/");
+  const input = page.getByLabel("Message Ask Lucas", { exact: true });
+
+  await input.press("Enter");
+  await expect(page.locator("#composer-validation")).toHaveText("Enter a question before sending.");
+  await expect(input).toBeFocused();
+
+  await input.fill("x".repeat(501));
+  await input.press("Enter");
+  await expect(
+    page.locator("#composer-validation"),
+  ).toHaveText("Keep the question to 500 characters or fewer.");
+  await expect(input).toBeFocused();
+
+  await page.route("**/v1/chat", async (route) => route.abort("failed"));
+  await input.fill("Which systems did Lucas build?");
+  await input.press("Enter");
+  await expect(
+    page
+      .getByRole("article")
+      .getByText("The connection was interrupted before a complete answer arrived.", {
+        exact: true,
+      }),
+  ).toBeVisible();
+  await expect(page.getByText("Which systems did Lucas build?", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again", exact: true })).toBeVisible();
+});
+
+test("a pending request exposes the honest slow-response state", async ({ page }) => {
+  await page.clock.install();
+  let releaseResponse: (() => void) | undefined;
+  const responseGate = new Promise<void>((resolve) => {
+    releaseResponse = resolve;
+  });
+  await page.route("**/v1/chat", async (route) => {
+    await responseGate;
+    await route.continue();
+  });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: SHOWCASE_QUESTION, exact: true }).click();
+  await expect(
+    page.getByRole("article").getByText("Reviewing approved sources", { exact: false }),
+  ).toBeVisible();
+  await page.clock.fastForward(8_100);
+  await expect(
+    page
+      .getByRole("article")
+      .getByText("The answer is taking longer than usual, but it is still working.", {
+        exact: true,
+      }),
+  ).toBeVisible();
+
+  releaseResponse?.();
+  await expect(page.getByText("1 source ·", { exact: false })).toBeVisible();
+});
+
+test("evidence inspector navigates all cited sources", async ({ page }) => {
+  await page.route("**/v1/chat", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        kind: "grounded",
+        blocks: [
+          { text: "One supported claim.", source_ids: ["profile:first"] },
+          { text: "Another supported claim.", source_ids: ["projects:second"] },
+        ],
+        sources: [
+          {
+            source_id: "profile:first",
+            title: "Profile",
+            section: "First section",
+            excerpt: "First approved excerpt.",
+            content_path: "content/profile.md",
+          },
+          {
+            source_id: "projects:second",
+            title: "Projects",
+            section: "Second section",
+            excerpt: "Second approved excerpt.",
+            content_path: "content/projects.md",
+          },
+        ],
+        trace: {
+          trace_id: "two-source-trace",
+          retrieval_strategy: "sqlite-fts5",
+          score_kind: "bm25",
+          score_order: "lower_is_better",
+          retrieved: [
+            { source_id: "profile:first", rank: 1, raw_score: -2 },
+            { source_id: "projects:second", rank: 2, raw_score: -1 },
+          ],
+          provider_mode: "mock",
+          model: null,
+          retrieval_ms: 1,
+          generation_ms: 1,
+          total_ms: 2,
+        },
+      }),
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: SHOWCASE_QUESTION, exact: true }).click();
+  await page.getByRole("button", { name: "Open source 1 for claim 1: First section" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "First section", exact: true });
+  await expect(dialog.getByText("First approved excerpt.", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Second section", exact: true })).toBeVisible();
+  await expect(page.getByText("Second approved excerpt.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Previous", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "First section", exact: true })).toBeVisible();
 });

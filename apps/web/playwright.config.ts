@@ -30,6 +30,7 @@ export default defineConfig({
       command: "uv run uvicorn ask_lucas.main:app --host 127.0.0.1 --port 8000",
       cwd: "../api",
       url: "http://127.0.0.1:8000/health",
+      env: { ASK_LUCAS_RATE_LIMIT_REQUESTS: "1000" },
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },

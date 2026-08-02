@@ -4,6 +4,7 @@ export type GroundedAnswer = components["schemas"]["GroundedAnswer"];
 export type AbstainedAnswer = components["schemas"]["AbstainedAnswer"];
 export type AnswerResponse = GroundedAnswer | AbstainedAnswer;
 export type Source = components["schemas"]["Source"];
+export type SystemSummary = components["schemas"]["SystemSummary"];
 export type ErrorEnvelope = components["schemas"]["ErrorEnvelope"];
 export type ConversationMessage = components["schemas"]["ConversationMessage"];
 
@@ -58,4 +59,12 @@ export async function continueConversation(
   }
 
   return payload as AnswerResponse;
+}
+
+export async function getSystemSummary(signal?: AbortSignal): Promise<SystemSummary> {
+  const response = await fetch(`${API_BASE_URL}/v1/system`, { signal });
+  if (!response.ok) {
+    throw new Error("System information is temporarily unavailable.");
+  }
+  return (await response.json()) as SystemSummary;
 }
