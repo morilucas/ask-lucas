@@ -17,6 +17,7 @@ __pycache__/
 .ruff_cache/
 .uv-cache/
 .test-tmp/
+.pytest-tmp-*/
 
 # JavaScript
 node_modules/

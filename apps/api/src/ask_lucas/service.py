@@ -8,6 +8,7 @@ from ask_lucas.retrieval import RetrievalError
 from ask_lucas.schemas import (
     AbstainedAnswer,
     AnswerResponse,
+    ConversationMessage,
     GroundedAnswer,
     RetrievedItem,
     TraceSummary,
@@ -22,18 +23,25 @@ class RetrievalAnswerService:
         self.provider = provider
         self.limit = limit
 
-    def answer(self, question: str, trace_id: str) -> AnswerResponse:
+    def answer(
+        self,
+        question: str,
+        trace_id: str,
+        *,
+        retrieval_question: str | None = None,
+        history: tuple[ConversationMessage, ...] = (),
+    ) -> AnswerResponse:
         started = perf_counter()
         retrieval_started = perf_counter()
         try:
-            retrieval_result = self.retriever.retrieve(question, self.limit)
+            retrieval_result = self.retriever.retrieve(retrieval_question or question, self.limit)
         except RetrievalError as error:
             raise RetrievalUnavailable from error
         evidence = list(retrieval_result.evidence)
         retrieval_ms = (perf_counter() - retrieval_started) * 1000
 
         generation_started = perf_counter()
-        draft = self.provider.answer(question, [item.source for item in evidence])
+        draft = self.provider.answer(question, [item.source for item in evidence], history)
         generation_ms = (perf_counter() - generation_started) * 1000
         trace = TraceSummary(
             trace_id=trace_id,
@@ -48,7 +56,8 @@ class RetrievalAnswerService:
                 )
                 for item in evidence
             ],
-            provider_mode="mock",
+            provider_mode="live" if self.provider.mode == "live" else "mock",
+            model=self.provider.model,
             retrieval_ms=retrieval_ms,
             generation_ms=generation_ms,
             total_ms=(perf_counter() - started) * 1000,

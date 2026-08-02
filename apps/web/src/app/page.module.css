@@ -60,11 +60,11 @@
 .main {
   width: min(100% - 2rem, var(--width-reading));
   margin-inline: auto;
-  padding-block: clamp(4.5rem, 11vw, 8.5rem) 5rem;
+  padding-block: clamp(3.5rem, 8vw, 6rem) 5rem;
 }
 
 .introduction {
-  margin-bottom: clamp(3rem, 7vw, 5rem);
+  margin-bottom: clamp(2.5rem, 6vw, 4rem);
 }
 
 .eyebrow {
@@ -77,10 +77,10 @@
 }
 
 .introduction h1 {
-  max-width: 12ch;
+  max-width: 13ch;
   margin: 0;
   font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(3.25rem, 9vw, 6.5rem);
+  font-size: clamp(3rem, 8vw, 5.6rem);
   font-weight: 420;
   letter-spacing: -0.055em;
   line-height: 0.93;

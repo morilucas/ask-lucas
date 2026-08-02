@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 const SHOWCASE_QUESTION = "What AI and data systems has Lucas built?";
 const SOURCE_SECTION = "Acme — AI & Data Engineer";
 
-test("suggestion, retrieved answer, evidence, abstention, and reset", async ({ page }) => {
+test("suggestion, grounded answer, follow-up, evidence, and new conversation", async ({ page }) => {
   await page.goto("/");
 
   const suggestion = page.getByRole("button", { name: SHOWCASE_QUESTION, exact: true });
@@ -43,9 +43,14 @@ test("suggestion, retrieved answer, evidence, abstention, and reset", async ({ p
   await expect(evidenceDialog).toBeHidden();
   await expect(secondCitation).toBeFocused();
 
-  await page.getByRole("button", { name: "Ask another question", exact: true }).click();
-  const input = page.getByLabel("Ask a question", { exact: true });
-  await expect(input).toBeFocused();
+  const input = page.getByLabel("Message Ask Lucas", { exact: true });
+  await input.fill("Which tools did he use?");
+  await input.press("Enter");
+  await expect(
+    page.getByText("The closest reviewed evidence is in", { exact: false }).first(),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "New conversation", exact: true }).click();
   await input.fill("What is Lucas's favorite movie?");
   await input.press("Enter");
 

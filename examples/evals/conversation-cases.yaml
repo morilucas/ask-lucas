@@ -1,0 +1,27 @@
+version: "synthetic-conversation-0.1"
+description: Synthetic multi-turn cases for the conversational milestone.
+
+cases:
+  - id: synthetic-ai-systems-tools-follow-up
+    category: grounded-conversation
+    messages:
+      - role: user
+        content: What AI and data systems has Lucas built?
+      - role: assistant
+        content: The candidate has built data and AI systems described in the reviewed Acme evidence.
+      - role: user
+        content: Which tools did he use?
+    expected_behavior: Use recent user context to retrieve and cite only synthetic reviewed evidence.
+    required_sources:
+      - experience:acme-ai-data-engineer
+
+  - id: synthetic-unsupported-follow-up
+    category: abstained-conversation
+    messages:
+      - role: user
+        content: What AI and data systems has Lucas built?
+      - role: assistant
+        content: The candidate has built systems described in the reviewed evidence.
+      - role: user
+        content: What is his favorite movie?
+    expected_behavior: Abstain because the requested personal preference is absent from evidence.

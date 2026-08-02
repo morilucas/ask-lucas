@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class StrictModel(BaseModel):
@@ -26,6 +26,35 @@ class AnswerRequest(StrictModel):
         if isinstance(value, str):
             return value.strip()
         return value
+
+
+class ConversationMessage(StrictModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=2000)
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def normalize_content(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+
+class ChatRequest(StrictModel):
+    messages: list[ConversationMessage] = Field(min_length=1, max_length=12)
+
+    @model_validator(mode="after")
+    def conversation_is_bounded_and_ordered(self) -> "ChatRequest":
+        if self.messages[0].role != "user" or self.messages[-1].role != "user":
+            raise ValueError("A conversation must begin and end with a user message.")
+        if any(
+            current.role == previous.role
+            for previous, current in zip(self.messages, self.messages[1:], strict=False)
+        ):
+            raise ValueError("Conversation roles must alternate.")
+        if sum(len(message.content) for message in self.messages) > 6000:
+            raise ValueError("Conversation context is too large.")
+        return self
 
 
 class AnswerBlock(StrictModel):

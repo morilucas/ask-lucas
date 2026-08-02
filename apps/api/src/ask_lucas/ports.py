@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
-from ask_lucas.schemas import AnswerBlock, AnswerResponse, ScoreOrder, Source
+from ask_lucas.schemas import AnswerBlock, AnswerResponse, ConversationMessage, ScoreOrder, Source
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,10 +42,25 @@ class Retriever(Protocol):
 
 
 class AnswerProvider(Protocol):
-    def answer(self, question: str, evidence: Sequence[Source]) -> ProviderDraft:
+    mode: str
+    model: str | None
+
+    def answer(
+        self,
+        question: str,
+        evidence: Sequence[Source],
+        history: Sequence[ConversationMessage] = (),
+    ) -> ProviderDraft:
         """Return an answer draft that may cite only supplied evidence."""
 
 
 class AnswerService(Protocol):
-    def answer(self, question: str, trace_id: str) -> AnswerResponse:
+    def answer(
+        self,
+        question: str,
+        trace_id: str,
+        *,
+        retrieval_question: str | None = None,
+        history: tuple[ConversationMessage, ...] = (),
+    ) -> AnswerResponse:
         """Execute the complete answer workflow."""

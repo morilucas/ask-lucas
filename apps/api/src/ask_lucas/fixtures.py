@@ -9,7 +9,13 @@ from pathlib import Path
 from pydantic import ValidationError, model_validator
 
 from ask_lucas.ports import AbstainedDraft, GroundedDraft, ProviderDraft
-from ask_lucas.schemas import AnswerBlock, GroundedAnswer, Source, StrictModel
+from ask_lucas.schemas import (
+    AnswerBlock,
+    ConversationMessage,
+    GroundedAnswer,
+    Source,
+    StrictModel,
+)
 
 
 class AnswerUnavailable(RuntimeError):
@@ -50,6 +56,9 @@ class FixtureCatalog(StrictModel):
 class FixtureAnswerProvider:
     """Load reviewed deterministic drafts without embedding biography in code."""
 
+    mode: str = "mock"
+    model: str | None = None
+
     def __init__(self, catalog: FixtureCatalog) -> None:
         self.catalog = catalog
 
@@ -62,7 +71,11 @@ class FixtureAnswerProvider:
             raise AnswerUnavailable("The reviewed answer fixture could not be loaded.") from error
         return cls(catalog)
 
-    def answer(self, question: str, evidence: Sequence[Source]) -> ProviderDraft:
+    def grounded_answer(
+        self,
+        question: str,
+        evidence: Sequence[Source],
+    ) -> GroundedDraft | None:
         evidence_ids = {source.source_id for source in evidence}
         fixture = next(
             (
@@ -78,10 +91,74 @@ class FixtureAnswerProvider:
             if cited_ids and cited_ids.issubset(evidence_ids):
                 return GroundedDraft(blocks=fixture.blocks)
 
+        return None
+
+    def answer(
+        self,
+        question: str,
+        evidence: Sequence[Source],
+        history: Sequence[ConversationMessage] = (),
+    ) -> ProviderDraft:
+        del history
+        grounded = self.grounded_answer(question, evidence)
+        if grounded is not None:
+            return grounded
+
         return AbstainedDraft(
             message=self.catalog.abstention.message,
             suggestions=self.catalog.abstention.suggestions,
         )
+
+
+class GroundedExtractiveProvider:
+    """Use reviewed fixtures first, then quote the best retrieved evidence without invention."""
+
+    mode: str = "mock"
+    model: str | None = None
+
+    def __init__(self, fixtures: FixtureAnswerProvider) -> None:
+        self.fixtures = fixtures
+
+    def answer(
+        self,
+        question: str,
+        evidence: Sequence[Source],
+        history: Sequence[ConversationMessage] = (),
+    ) -> ProviderDraft:
+        del history
+        grounded = self.fixtures.grounded_answer(question, evidence)
+        if grounded is not None:
+            return grounded
+        if not evidence:
+            return AbstainedDraft(
+                message=self.fixtures.catalog.abstention.message,
+                suggestions=self.fixtures.catalog.abstention.suggestions,
+            )
+
+        blocks = [
+            AnswerBlock(
+                text=(
+                    f'The closest reviewed evidence is in "{source.section}". '
+                    f"It states: {_representative_line(source.excerpt)}"
+                ),
+                source_ids=[source.source_id],
+            )
+            for source in evidence[:2]
+        ]
+        return GroundedDraft(blocks=blocks)
+
+
+def _representative_line(excerpt: str) -> str:
+    lines = [line.removeprefix("- ").strip() for line in excerpt.splitlines()]
+    candidates = [
+        line
+        for line in lines
+        if line and not line.casefold().startswith(("status:", "public-content boundary:"))
+    ]
+    if not candidates:
+        return "The reviewed source contains no additional summary text."
+    selected = next((line for line in candidates if len(line.split()) >= 5), candidates[0])
+    return selected if selected.endswith((".", "!", "?")) else f"{selected}."
 
 
 def validate_answer_sources(

@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "generate:api": "openapi-typescript ../api/openapi.json -o src/lib/api-schema.d.ts",
-    "test:e2e": "playwright test && next typegen"
+    "test:e2e": "node scripts/prepare-standalone.mjs && playwright test && next typegen"
   },
   "dependencies": {
     "next": "16.2.12",

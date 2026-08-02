@@ -11,10 +11,12 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 
+from ask_lucas.anthropic_provider import AnthropicAnswerProvider
 from ask_lucas.config import Settings, get_settings
 from ask_lucas.fixtures import (
     AnswerUnavailable,
     FixtureAnswerProvider,
+    GroundedExtractiveProvider,
     InvalidAnswerOutput,
     RetrievalUnavailable,
     validate_answer_sources,
@@ -24,6 +26,8 @@ from ask_lucas.retrieval import SQLiteRetriever
 from ask_lucas.schemas import (
     AnswerRequest,
     AnswerResponse,
+    ChatRequest,
+    ConversationMessage,
     ErrorEnvelope,
     EvaluationSummary,
     GroundedAnswer,
@@ -34,6 +38,37 @@ from ask_lucas.schemas import (
 from ask_lucas.service import RetrievalAnswerService
 
 TRACE_HEADER = "X-Trace-ID"
+
+
+def contextual_retrieval_query(messages: list[ConversationMessage]) -> str:
+    """Carry recent user wording into lexical retrieval for follow-up questions."""
+
+    recent_user_messages = [message.content for message in messages if message.role == "user"][-3:]
+    return " ".join(recent_user_messages)
+
+
+def configured_provider(
+    settings: Settings,
+) -> FixtureAnswerProvider | GroundedExtractiveProvider | AnthropicAnswerProvider:
+    fixtures = FixtureAnswerProvider.from_path(settings.answer_fixture_path)
+    provider = settings.provider.casefold()
+    if provider not in {"auto", "anthropic", "claude", "extractive", "fixture"}:
+        raise ValueError(
+            "ASK_LUCAS_PROVIDER must be auto, anthropic, claude, extractive, or fixture."
+        )
+
+    api_key = settings.anthropic_api_key.get_secret_value() if settings.anthropic_api_key else None
+    if provider in {"anthropic", "claude"} and not api_key:
+        raise ValueError("ASK_LUCAS_ANTHROPIC_API_KEY is required for the Claude provider.")
+    if provider in {"anthropic", "claude"} or (provider == "auto" and api_key):
+        return AnthropicAnswerProvider(
+            api_key=api_key or "",
+            model=settings.anthropic_model,
+            timeout_seconds=settings.anthropic_timeout_seconds,
+        )
+    if provider == "fixture":
+        return fixtures
+    return GroundedExtractiveProvider(fixtures)
 
 
 def _trace_id(request: Request) -> str:
@@ -71,7 +106,7 @@ def create_app(
     resolved_settings = settings or get_settings()
     service = answer_service or RetrievalAnswerService(
         retriever=SQLiteRetriever(resolved_settings.index_path, resolved_settings.content_dir),
-        provider=FixtureAnswerProvider.from_path(resolved_settings.answer_fixture_path),
+        provider=configured_provider(resolved_settings),
     )
     app = FastAPI(title="Ask Lucas API", version="0.1.0")
     app.state.answer_service = service
@@ -101,7 +136,7 @@ def create_app(
             request,
             status_code=422,
             code="invalid_request",
-            message="Enter a question between 1 and 500 characters.",
+            message="Enter a valid question and keep the conversation within its size limit.",
             retryable=False,
         )
 
@@ -144,7 +179,7 @@ def create_app(
             evaluation=EvaluationSummary(status="unavailable", version="0.2"),
             limitations=[
                 "The baseline uses lexical rather than semantic retrieval.",
-                "The deterministic provider currently supports one reviewed grounded answer.",
+                "Without an API key, answers use a grounded extractive fallback.",
             ],
             next_experiment="Measure Recall@3, then compare lexical and semantic retrieval.",
         )
@@ -157,6 +192,49 @@ def create_app(
     async def answer(request: Request, payload: AnswerRequest) -> Any:
         try:
             result = app.state.answer_service.answer(payload.question, _trace_id(request))
+            if isinstance(result, GroundedAnswer):
+                validate_answer_sources(result)
+            return result
+        except InvalidAnswerOutput:
+            return _error(
+                request,
+                status_code=503,
+                code="invalid_provider_output",
+                message="The answer could not be safely validated. Please try again.",
+                retryable=True,
+            )
+        except AnswerUnavailable:
+            return _error(
+                request,
+                status_code=503,
+                code="provider_unavailable",
+                message="The answer could not be completed. Please try again.",
+                retryable=True,
+            )
+        except RetrievalUnavailable:
+            return _error(
+                request,
+                status_code=503,
+                code="retrieval_unavailable",
+                message="The approved sources could not be searched. Please try again.",
+                retryable=True,
+            )
+
+    @app.post(
+        "/v1/chat",
+        response_model=AnswerResponse,
+        responses={422: {"model": ErrorEnvelope}, 503: {"model": ErrorEnvelope}},
+    )
+    async def chat(request: Request, payload: ChatRequest) -> Any:
+        question = payload.messages[-1].content
+        history = tuple(payload.messages[:-1])
+        try:
+            result = app.state.answer_service.answer(
+                question,
+                _trace_id(request),
+                retrieval_question=contextual_retrieval_query(payload.messages),
+                history=history,
+            )
             if isinstance(result, GroundedAnswer):
                 validate_answer_sources(result)
             return result

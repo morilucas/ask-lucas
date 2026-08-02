@@ -22,10 +22,10 @@ export default function Home() {
       <main id="main-content" className={styles.main}>
         <section className={styles.introduction} aria-labelledby="page-title">
           <p className={styles.eyebrow}>AI engineering portfolio</p>
-          <h1 id="page-title">Ask about Lucas&apos;s work.</h1>
+          <h1 id="page-title">A grounded conversation about Lucas&apos;s work.</h1>
           <p className={styles.lede}>
-            Explore his experience, projects, and approach through answers grounded in reviewed
-            public sources.
+            Ask about his experience, projects, and approach. Continue with follow-up questions,
+            and inspect the reviewed evidence behind every answer.
           </p>
         </section>
 

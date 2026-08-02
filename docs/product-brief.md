@@ -155,7 +155,7 @@ The planned next experiment is semantic or hybrid retrieval with PostgreSQL and 
 - Python is the primary AI/backend language
 - The product should demonstrate SQL, RAG, vector retrieval, evaluation, observability, deployment, and frontend delivery
 - Reuse GitHub, Vercel, Cloudflare, and the Hostinger VPS when deployment becomes the active milestone
-- OpenAI and Anthropic API billing remain separate and unconfirmed
+- Anthropic API credits are available; Claude Haiku 4.5 is the cost-conscious first provider
 - Initial target domain: `ask.lkmori.com`
 
 ## Primary risks
@@ -173,6 +173,6 @@ The planned next experiment is semantic or hybrid retrieval with PostgreSQL and 
 These do not block the first build:
 
 - Final typeface files and accent color after the browser prototype is measured
-- Which external model provider wins the first measured comparison
+- Whether Claude Haiku 4.5 needs a higher-capability model after quality evaluation
 - Which embedding model and hybrid strategy perform best in the committed retrieval comparison
-- When to add multi-turn conversation and job-description analysis
+- When to add job-description analysis

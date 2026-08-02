@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Grounded answer API for the Ask Lucas portfolio"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+  "anthropic>=0.75,<1.0",
   "fastapi>=0.116,<1.0",
   "pydantic-settings>=2.10,<3.0",
   "uvicorn[standard]>=0.35,<1.0",

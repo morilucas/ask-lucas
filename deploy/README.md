@@ -13,7 +13,8 @@ The Compose project mounts `private/` read-only into the API container. The brow
 ## Deploy or update
 
 1. Pull both repositories with read-only deploy credentials.
-2. Copy `deploy/.env.example` to `deploy/.env` and set the build version.
+2. Copy `deploy/.env.example` to `deploy/.env`, set the build version, and add
+   `ASK_LUCAS_ANTHROPIC_API_KEY`. This file stays only on the VPS and is ignored by Git.
 3. Run:
 
 ```bash

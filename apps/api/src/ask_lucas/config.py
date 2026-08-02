@@ -3,6 +3,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -34,6 +35,10 @@ class Settings(BaseSettings):
     answer_fixture_path: Path = EXAMPLE_ROOT / "fixtures" / "answers.json"
     evaluation_path: Path = EXAMPLE_ROOT / "evals" / "employer-questions.yaml"
     index_path: Path = REPOSITORY_ROOT / "apps" / "api" / "data" / "content.db"
+    provider: str = "auto"
+    anthropic_api_key: SecretStr | None = None
+    anthropic_model: str = "claude-haiku-4-5"
+    anthropic_timeout_seconds: float = 30.0
 
     @property
     def allowed_origin_list(self) -> list[str]:

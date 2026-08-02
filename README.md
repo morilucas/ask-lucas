@@ -8,7 +8,9 @@ The current vertical slice includes:
 - A typed FastAPI contract with safe errors and request trace IDs
 - Markdown ingestion with stable source IDs
 - SQLite FTS5 top-three lexical retrieval with explicit BM25 semantics
-- A file-backed deterministic answer provider with citation validation
+- Multi-turn conversation with bounded context and grounded follow-ups
+- A Claude adapter with structured output and citation validation
+- A file-backed extractive fallback that requires no API key
 - Clear abstention when evidence is insufficient
 - API, retrieval, ingestion, and browser acceptance tests
 - Rootless, read-only application containers behind an existing Caddy ingress
@@ -58,6 +60,8 @@ Open `http://127.0.0.1:3000`.
 
 To use a private checkout locally, copy `apps/api/.env.example` to `apps/api/.env` and change the content, fixture, and evaluation paths. Never commit that file.
 
+To use Claude, add `ASK_LUCAS_ANTHROPIC_API_KEY` to that untracked `.env` file. `ASK_LUCAS_PROVIDER=auto` selects Claude when the key exists and the extractive fallback otherwise. The default model is the cost-conscious `claude-haiku-4-5`; override `ASK_LUCAS_ANTHROPIC_MODEL` to run a measured model comparison.
+
 ## Verify
 
 ```powershell
@@ -87,4 +91,5 @@ The generated index and build artifacts are ignored by Git. Regenerate the TypeS
 - [`docs/constitution.md`](docs/constitution.md)
 - [`docs/skills-showcase.md`](docs/skills-showcase.md)
 - [`specs/001-grounded-chat/spec.md`](specs/001-grounded-chat/spec.md)
+- [`specs/002-conversational-claude/spec.md`](specs/002-conversational-claude/spec.md)
 - [`docs/decisions/0001-start-with-lexical-rag.md`](docs/decisions/0001-start-with-lexical-rag.md)

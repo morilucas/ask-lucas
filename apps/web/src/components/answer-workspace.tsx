@@ -1,65 +1,131 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 
-import { ApiError, AnswerResponse, GroundedAnswer, Source, askQuestion } from "@/lib/api";
+import {
+  ApiError,
+  AnswerResponse,
+  ConversationMessage,
+  GroundedAnswer,
+  Source,
+  continueConversation,
+} from "@/lib/api";
 import { SUGGESTED_QUESTIONS } from "@/lib/questions";
 
 import styles from "./answer-workspace.module.css";
 
-type RequestState =
-  | { status: "idle" }
-  | { status: "pending"; question: string }
-  | { status: "complete"; question: string; answer: AnswerResponse }
-  | { status: "error"; question: string; message: string; traceId?: string };
+type ExchangeState =
+  | { status: "pending" }
+  | { status: "complete"; answer: AnswerResponse }
+  | { status: "error"; message: string; traceId?: string };
+
+type Exchange = {
+  id: string;
+  question: string;
+  state: ExchangeState;
+};
+
+function answerText(answer: AnswerResponse): string {
+  return answer.kind === "grounded"
+    ? answer.blocks.map((block) => block.text).join("\n")
+    : answer.message;
+}
+
+function conversationMessages(exchanges: Exchange[], question: string): ConversationMessage[] {
+  const history: ConversationMessage[] = [];
+  let remainingCharacters = Math.max(0, 6000 - question.length);
+
+  for (const exchange of exchanges.toReversed()) {
+    if (exchange.state.status !== "complete") continue;
+    const answer = answerText(exchange.state.answer);
+    const pairCharacters = exchange.question.length + answer.length;
+    if (pairCharacters > remainingCharacters || history.length >= 10) break;
+    history.unshift(
+      { role: "user", content: exchange.question },
+      { role: "assistant", content: answer },
+    );
+    remainingCharacters -= pairCharacters;
+  }
+
+  return [...history, { role: "user", content: question }];
+}
 
 export function AnswerWorkspace() {
-  const [question, setQuestion] = useState("");
-  const [requestState, setRequestState] = useState<RequestState>({ status: "idle" });
+  const [draft, setDraft] = useState("");
+  const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [activeSource, setActiveSource] = useState<Source | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const lastTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const isPending = exchanges.some((exchange) => exchange.state.status === "pending");
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    if (activeSource && dialog && !dialog.open) {
-      dialog.showModal();
-    }
+    if (activeSource && dialog && !dialog.open) dialog.showModal();
   }, [activeSource]);
 
-  async function submitQuestion(nextQuestion: string) {
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "nearest" });
+  }, [exchanges]);
+
+  async function submitQuestion(nextQuestion: string, retryId?: string) {
     const normalized = nextQuestion.trim();
-    if (!normalized || requestState.status === "pending") return;
+    if (!normalized || isPending) return;
 
-    setQuestion(normalized);
-    setRequestState({ status: "pending", question: normalized });
+    const id = retryId ?? crypto.randomUUID();
+    const priorExchanges = retryId
+      ? exchanges.filter((exchange) => exchange.id !== retryId)
+      : exchanges;
+    const pendingExchange: Exchange = { id, question: normalized, state: { status: "pending" } };
+    setExchanges([...priorExchanges, pendingExchange]);
+    setDraft("");
 
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
-      const answer = await askQuestion(normalized);
-      setRequestState({ status: "complete", question: normalized, answer });
+      const answer = await continueConversation(
+        conversationMessages(priorExchanges, normalized),
+        controller.signal,
+      );
+      setExchanges((current) =>
+        current.map((exchange) =>
+          exchange.id === id ? { ...exchange, state: { status: "complete", answer } } : exchange,
+        ),
+      );
     } catch (error) {
-      if (error instanceof ApiError) {
-        setRequestState({
-          status: "error",
-          question: normalized,
-          message: error.message,
-          traceId: error.traceId,
-        });
+      if (controller.signal.aborted) {
+        setExchanges((current) => current.filter((exchange) => exchange.id !== id));
+        setDraft(normalized);
         return;
       }
-
-      setRequestState({
-        status: "error",
-        question: normalized,
-        message: "The API could not be reached. Confirm that the local service is running.",
-      });
+      const state: ExchangeState =
+        error instanceof ApiError
+          ? { status: "error", message: error.message, traceId: error.traceId }
+          : {
+              status: "error",
+              message: "The assistant could not be reached. Please try again.",
+            };
+      setExchanges((current) =>
+        current.map((exchange) => (exchange.id === id ? { ...exchange, state } : exchange)),
+      );
+    } finally {
+      abortRef.current = null;
     }
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void submitQuestion(question);
+    void submitQuestion(draft);
+  }
+
+  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void submitQuestion(draft);
+    }
   }
 
   function openSource(source: Source, trigger: HTMLButtonElement) {
@@ -67,48 +133,28 @@ export function AnswerWorkspace() {
     setActiveSource(source);
   }
 
-  function closeInspector() {
-    dialogRef.current?.close();
-  }
-
-  function handleDialogClose() {
-    setActiveSource(null);
-    lastTriggerRef.current?.focus();
-  }
-
-  function reset() {
-    setRequestState({ status: "idle" });
-    setQuestion("");
+  function newConversation() {
+    abortRef.current?.abort();
+    setExchanges([]);
+    setDraft("");
     window.requestAnimationFrame(() => inputRef.current?.focus());
   }
 
-  const isPending = requestState.status === "pending";
-
   return (
-    <section className={styles.workspace} aria-label="Ask Lucas">
-      <form className={styles.composer} onSubmit={handleSubmit}>
-        <label htmlFor="question">Ask a question</label>
-        <div className={styles.inputRow}>
-          <input
-            ref={inputRef}
-            id="question"
-            name="question"
-            value={question}
-            minLength={1}
-            maxLength={500}
-            disabled={isPending}
-            onChange={(event) => setQuestion(event.target.value)}
-            placeholder="Ask about his experience, projects, or approach…"
-            autoComplete="off"
-          />
-          <button type="submit" disabled={isPending || question.trim().length === 0}>
-            <span className={styles.submitLabel}>Ask</span>
-            <span aria-hidden="true">↗</span>
-          </button>
+    <section className={styles.workspace} aria-label="Conversation with Ask Lucas">
+      <div className={styles.chatHeader}>
+        <div>
+          <span className={styles.statusDot} aria-hidden="true" />
+          Grounded assistant
         </div>
-      </form>
+        {exchanges.length > 0 ? (
+          <button type="button" onClick={newConversation}>
+            New conversation
+          </button>
+        ) : null}
+      </div>
 
-      {requestState.status === "idle" ? (
+      {exchanges.length === 0 ? (
         <div className={styles.suggestions} aria-label="Suggested questions">
           {SUGGESTED_QUESTIONS.map((suggestion, index) => (
             <button
@@ -122,60 +168,83 @@ export function AnswerWorkspace() {
             </button>
           ))}
         </div>
-      ) : null}
-
-      <div className={styles.statusRegion} aria-live="polite" aria-atomic="true">
-        {requestState.status === "pending" ? (
-          <article className={styles.answer} aria-busy="true">
-            <p className={styles.question}>{requestState.question}</p>
-            <p className={styles.pending}>Reviewing approved sources…</p>
-          </article>
-        ) : null}
-
-        {requestState.status === "complete" ? (
-          <article className={styles.answer}>
-            <p className={styles.question}>{requestState.question}</p>
-
-            {requestState.answer.kind === "grounded" ? (
-              <GroundedContent answer={requestState.answer} onOpenSource={openSource} />
-            ) : (
-              <div className={styles.prose}>
-                <p>{requestState.answer.message}</p>
-                <div className={styles.followUps}>
-                  {requestState.answer.suggestions.map((suggestion) => (
-                    <button key={suggestion} type="button" onClick={() => void submitQuestion(suggestion)}>
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
+      ) : (
+        <div className={styles.transcript} aria-live="polite">
+          {exchanges.map((exchange) => (
+            <div className={styles.exchange} key={exchange.id}>
+              <div className={styles.userMessage}>
+                <p className={styles.speaker}>You</p>
+                <p>{exchange.question}</p>
               </div>
-            )}
+              <article className={styles.assistantMessage} aria-busy={exchange.state.status === "pending"}>
+                <p className={styles.speaker}>Ask Lucas</p>
+                {exchange.state.status === "pending" ? (
+                  <p className={styles.pending}>Reviewing the evidence…</p>
+                ) : null}
+                {exchange.state.status === "complete" ? (
+                  exchange.state.answer.kind === "grounded" ? (
+                    <GroundedContent answer={exchange.state.answer} onOpenSource={openSource} />
+                  ) : (
+                    <div className={styles.answerProse}>
+                      <p>{exchange.state.answer.message}</p>
+                    </div>
+                  )
+                ) : null}
+                {exchange.state.status === "error" ? (
+                  <div className={styles.error}>
+                    <p>{exchange.state.message}</p>
+                    {exchange.state.traceId ? <p>Trace {exchange.state.traceId}</p> : null}
+                    <button
+                      type="button"
+                      onClick={() => void submitQuestion(exchange.question, exchange.id)}
+                    >
+                      Try again
+                    </button>
+                  </div>
+                ) : null}
+              </article>
+            </div>
+          ))}
+          <div ref={endRef} />
+        </div>
+      )}
 
-            <button type="button" className={styles.reset} onClick={reset}>
-              Ask another question
+      <form className={styles.composer} onSubmit={handleSubmit}>
+        <label htmlFor="question">Message Ask Lucas</label>
+        <div className={styles.composerSurface}>
+          <textarea
+            ref={inputRef}
+            id="question"
+            name="question"
+            value={draft}
+            rows={2}
+            maxLength={2000}
+            disabled={isPending}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={handleComposerKeyDown}
+            placeholder={exchanges.length ? "Ask a follow-up…" : "Ask about his experience, projects, or approach…"}
+          />
+          {isPending ? (
+            <button type="button" className={styles.stopButton} onClick={() => abortRef.current?.abort()}>
+              Stop
             </button>
-          </article>
-        ) : null}
-
-        {requestState.status === "error" ? (
-          <article className={`${styles.answer} ${styles.error}`}>
-            <p className={styles.question}>{requestState.question}</p>
-            <p>{requestState.message}</p>
-            {requestState.traceId ? <p className={styles.trace}>Trace {requestState.traceId}</p> : null}
-            <button type="button" className={styles.reset} onClick={() => void submitQuestion(requestState.question)}>
-              Try again
+          ) : (
+            <button type="submit" className={styles.sendButton} disabled={!draft.trim()} aria-label="Send message">
+              ↗
             </button>
-          </article>
-        ) : null}
-      </div>
-
-      <p className={styles.trustNote}>Answers cite reviewed public sources. No conversation is stored.</p>
+          )}
+        </div>
+        <p>Conversation stays in this browser tab. Answers are limited to reviewed sources.</p>
+      </form>
 
       <dialog
         ref={dialogRef}
         className={styles.inspector}
         aria-labelledby="evidence-title"
-        onClose={handleDialogClose}
+        onClose={() => {
+          setActiveSource(null);
+          lastTriggerRef.current?.focus();
+        }}
       >
         <div className={styles.inspectorInner}>
           <header>
@@ -183,24 +252,17 @@ export function AnswerWorkspace() {
               <p>Evidence</p>
               <h2 id="evidence-title">{activeSource?.section}</h2>
             </div>
-            <button type="button" onClick={closeInspector} aria-label="Close evidence">
+            <button type="button" onClick={() => dialogRef.current?.close()} aria-label="Close evidence">
               Close
             </button>
           </header>
-
           {activeSource ? (
             <div className={styles.sourceBody}>
               <p className={styles.sourceTitle}>{activeSource.title}</p>
               <blockquote>{activeSource.excerpt}</blockquote>
               <dl>
-                <div>
-                  <dt>Source ID</dt>
-                  <dd>{activeSource.source_id}</dd>
-                </div>
-                <div>
-                  <dt>Public file</dt>
-                  <dd>{activeSource.content_path}</dd>
-                </div>
+                <div><dt>Source ID</dt><dd>{activeSource.source_id}</dd></div>
+                <div><dt>Reviewed file</dt><dd>{activeSource.content_path}</dd></div>
               </dl>
             </div>
           ) : null}
@@ -218,7 +280,7 @@ function GroundedContent({
   onOpenSource: (source: Source, trigger: HTMLButtonElement) => void;
 }) {
   return (
-    <div className={styles.prose}>
+    <div className={styles.answerProse}>
       {answer.blocks.map((block, blockIndex) => (
         <p key={`${block.text}-${blockIndex}`}>
           {block.text}{" "}
@@ -226,7 +288,6 @@ function GroundedContent({
             const source = answer.sources.find((candidate) => candidate.source_id === sourceId);
             if (!source) return null;
             const sourceNumber = answer.sources.indexOf(source) + 1;
-
             return (
               <button
                 key={sourceId}
@@ -241,10 +302,8 @@ function GroundedContent({
           })}
         </p>
       ))}
-
       <p className={styles.metadata}>
-        {answer.sources.length} source{answer.sources.length === 1 ? "" : "s"} ·{" "}
-        {Math.max(1, Math.round(answer.trace.total_ms))} ms · deterministic mock
+        {answer.sources.length} source{answer.sources.length === 1 ? "" : "s"} · {Math.max(1, Math.round(answer.trace.total_ms))} ms · {answer.trace.provider_mode === "live" ? answer.trace.model : "grounded extractive mode"}
       </p>
     </div>
   );

@@ -7,7 +7,7 @@ import pytest
 from ask_lucas.fixtures import InvalidAnswerOutput, RetrievalUnavailable
 from ask_lucas.ports import GroundedDraft, RetrievalResult, RetrievedEvidence
 from ask_lucas.retrieval import RetrievalError
-from ask_lucas.schemas import AnswerBlock, Source
+from ask_lucas.schemas import AnswerBlock, ConversationMessage, Source
 from ask_lucas.service import RetrievalAnswerService
 
 SOURCE = Source(
@@ -31,8 +31,16 @@ class StaticRetriever:
 
 
 class UnknownCitationProvider:
-    def answer(self, question: str, evidence: Sequence[Source]) -> GroundedDraft:
-        del question, evidence
+    mode: str = "mock"
+    model: str | None = None
+
+    def answer(
+        self,
+        question: str,
+        evidence: Sequence[Source],
+        history: Sequence[ConversationMessage] = (),
+    ) -> GroundedDraft:
+        del question, evidence, history
         return GroundedDraft(
             blocks=[AnswerBlock(text="Unsupported.", source_ids=["profile:unknown"])]
         )

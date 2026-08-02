@@ -12,6 +12,9 @@ services:
       ASK_LUCAS_ANSWER_FIXTURE_PATH: /private/fixtures/answers.json
       ASK_LUCAS_EVALUATION_PATH: /private/evals/employer-questions.yaml
       ASK_LUCAS_INDEX_PATH: /data/content.db
+      ASK_LUCAS_PROVIDER: ${ASK_LUCAS_PROVIDER:-auto}
+      ASK_LUCAS_ANTHROPIC_MODEL: ${ASK_LUCAS_ANTHROPIC_MODEL:-claude-haiku-4-5}
+      ASK_LUCAS_ANTHROPIC_API_KEY: ${ASK_LUCAS_ANTHROPIC_API_KEY:-}
     read_only: true
     tmpfs:
       - /tmp:size=16m,mode=1777
