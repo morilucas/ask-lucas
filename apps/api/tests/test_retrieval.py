@@ -82,18 +82,44 @@ def test_successful_rebuild_atomically_replaces_the_active_index(tmp_path: Path)
     assert sorted(path.name for path in tmp_path.iterdir()) == ["content.db"]
 
 
-def test_an_open_reader_keeps_serving_the_index_it_opened(tmp_path: Path) -> None:
+def read_source_ids(connection: sqlite3.Connection) -> list[str]:
+    rows = connection.execute("SELECT source_id FROM content_chunks").fetchall()
+    return [str(row[0]) for row in rows]
+
+
+def test_replacing_the_index_under_an_open_reader_follows_platform_rules(tmp_path: Path) -> None:
+    """POSIX replaces beneath an open reader; Windows refuses until that reader closes."""
+
     database_path = tmp_path / "content.db"
     rebuild_index(database_path, [make_chunk("profile:first", "Alpha.")])
+    replacement = [make_chunk("profile:second", "Beta.")]
     reader = sqlite3.connect(database_path)
     try:
-        rebuild_index(database_path, [make_chunk("profile:second", "Beta.")])
-        rows = reader.execute("SELECT source_id FROM content_chunks").fetchall()
+        assert read_source_ids(reader) == ["profile:first"]
+
+        if os.name == "nt":
+            # Windows refuses to rename over a file another handle still holds open.
+            with pytest.raises(RetrievalError):
+                rebuild_index(database_path, replacement)
+
+            assert read_source_ids(reader) == ["profile:first"]
+            assert [record[0] for record in read_index_records(database_path)] == ["profile:first"]
+            assert sorted(path.name for path in tmp_path.iterdir()) == ["content.db"]
+        else:
+            rebuild_index(database_path, replacement)
+
+            # The open handle keeps serving the file it opened, not the published one.
+            assert read_source_ids(reader) == ["profile:first"]
+            assert [record[0] for record in read_index_records(database_path)] == ["profile:second"]
     finally:
         reader.close()
 
-    assert [str(row[0]) for row in rows] == ["profile:first"]
+    if os.name == "nt":
+        # Retrying the same rebuild succeeds once the reader has released the file.
+        rebuild_index(database_path, replacement)
+
     assert [record[0] for record in read_index_records(database_path)] == ["profile:second"]
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["content.db"]
 
 
 def raise_validation_error(database_path: Path, expected_records: int, fingerprint: str) -> None:

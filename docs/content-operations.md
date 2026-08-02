@@ -65,9 +65,17 @@ A refresh never edits the active index in place. Each run:
 4. Replaces the active index with the validated temporary file in a single atomic step.
 
 Because each run reserves its own temporary name, concurrent refreshes cannot write over each
-other's partial work, and readers never observe a half-written database. A process that already had
-the previous index open continues serving it until it reopens; every connection opened after the
-replacement sees the new index.
+other's partial work, and readers never observe a half-written database.
+
+How step 4 behaves when something already has the index open depends on the platform:
+
+- **Linux, including the deployed container.** The replacement succeeds even while the API is
+  serving. A process that already had the previous index open continues reading the file it opened
+  until it reopens; every connection opened after the replacement sees the new index.
+- **Windows, used for local development.** The operating system refuses to rename over a file that
+  another process still holds open, so the refresh fails with `The index was not replaced: <reason>`
+  while a reader is active. Close whatever has the index open — a running API process or a SQLite
+  browser — and run the command again.
 
 The API applies the same procedure when it detects a changed corpus fingerprint during a request, so
 an automatic refresh is as safe as an explicit one.
@@ -76,7 +84,9 @@ an automatic refresh is as safe as an explicit one.
 
 If ingestion, the build, the validation step, or the replacement itself fails, the active index is
 left exactly as it was. The partial database and any SQLite sidecar files it produced are removed,
-so the destination directory is left holding only the last index that passed validation.
+so the destination directory is left holding only the last index that passed validation. That holds
+for a replacement Windows blocks because a reader is open: the previous index stays readable and no
+temporary file is left behind, so retrying after the reader closes is the whole recovery.
 
 The command writes `The index was not replaced: <reason>` to standard error and exits with status 1.
 Content locations in that message are redacted the same way validation redacts them. Because a
