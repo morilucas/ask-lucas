@@ -10,6 +10,8 @@ The current vertical slice includes:
 - SQLite FTS5 top-three lexical retrieval with explicit BM25 semantics
 - Multi-turn conversation with bounded context and grounded follow-ups
 - A Claude adapter with structured output and citation validation
+- A safe System Lens with retrieval, model, timing, and trace metadata
+- Metadata-only content validation and atomic SQLite index replacement
 - A file-backed extractive fallback that requires no API key
 - Clear abstention when evidence is insufficient
 - API, retrieval, ingestion, and browser acceptance tests

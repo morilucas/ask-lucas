@@ -1,6 +1,6 @@
 # Feature 004: MVP completion and content operations
 
-Status: Approved for implementation
+Status: Implemented and deployed
 Date: 2026-08-02
 
 ## User value
@@ -86,3 +86,11 @@ will justify and compare PostgreSQL/`pgvector` rather than adding it only as por
    can be exercised safely against the mounted production content.
 5. The deployed site passes grounded, follow-up, abstention, evidence, System Lens, error, mobile,
    and health smoke checks.
+
+## Verification record
+
+Implemented in release `652f14c` and deployed on 2026-08-02. The integrated code passed backend
+formatting, lint, strict typing, and 49 tests; frontend lint, strict typing, production build, and 12
+Playwright journeys across desktop and 320-pixel mobile layouts. Production validation accepted 20
+private sections, rebuilt the index atomically, and passed live health, grounded-answer, abstention,
+citation, System Lens, and page smoke checks.

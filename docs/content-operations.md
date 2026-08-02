@@ -1,6 +1,6 @@
 # Content operations
 
-Status: Implemented locally
+Status: Implemented and deployed
 Last updated: 2026-08-02
 
 This document describes how the approved content directory is validated and how the lexical index is
