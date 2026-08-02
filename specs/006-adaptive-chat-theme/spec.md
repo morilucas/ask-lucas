@@ -1,6 +1,6 @@
 # Feature 006: dark-first adaptive chat theme
 
-Status: Approved for implementation
+Status: Implemented and deployed
 Date: 2026-08-02
 
 ## Intent
@@ -40,3 +40,11 @@ engineering controls.
 - Desktop and 320-pixel screenshots are reviewed in dark and light appearances.
 - Production at `ask.lkmori.com` is manually verified after deployment.
 
+## Verification record
+
+- Lint, strict TypeScript, and the production Next.js build passed.
+- Fourteen Edge journeys passed across desktop and 320-pixel mobile projects.
+- Dark empty and light conversation states were visually reviewed at both viewport sizes.
+- Production returned HTTP 200 with the dark default and theme control in the rendered document.
+- The unchanged API returned HTTP 200 with build version `652f14c`.
+- Web release commit: `fa581a3`.
