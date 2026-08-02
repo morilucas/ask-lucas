@@ -1,6 +1,6 @@
 # Feature 007: header profile photo
 
-Status: Approved for delegated implementation
+Status: Deployed with source-file replacement pending
 Date: 2026-08-02
 
 ## Intent
@@ -31,6 +31,13 @@ The supervised worker implements the component, styles, tests, and documentation
 asset path. The coordinator supplies and reviews the binary asset during integration because the
 worker has no private-content or network access.
 
+## Implementation note
+
+The conversation attachment was available to the image-processing workflow but not as an original
+binary file. The deployed 256-by-256 WebP is an identity-preserving web preparation derived from that
+attachment. Replacing it with a pixel-preserving conversion of the original source file remains a
+non-UI follow-up when Lucas supplies a readable local path.
+
 ## Acceptance
 
 - Lint, strict TypeScript, production build, and all existing browser journeys pass.
@@ -38,4 +45,3 @@ worker has no private-content or network access.
   horizontal overflow at the mobile viewport.
 - Dark and light desktop/mobile screenshots are reviewed after the real asset is added.
 - No unrelated interface, retrieval, API, infrastructure, or content behavior changes.
-
